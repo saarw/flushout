@@ -129,7 +129,7 @@ export class Model {
         }
     }
 
-    navigateToNode(path: string[]): {found: false, errorPath: string[]} | {found: true, node: any} {
+    private navigateToNode(path: string[]): {found: false, errorPath: string[]} | {found: true, node: any} {
         let n = this.data.root;
         for (let i = 0; i < path.length; i++) {
             n = n[path[i]];
@@ -141,9 +141,17 @@ export class Model {
     }
 }
 
+interface HistoryStore {
+    // Returns the history from the specified update number, if available, otherwise undefined
+    getFrom(updateNum: number): CommandExecution[] | undefined;
+
+    // Stores the execution with its model udate number
+    store(updateNum: number, command: CommandExecution);
+}
+
 class ModelUpdater {
     
-    historyProvider: (fromUpdate: number) => CommandExecution[];
+    historyStore: HistoryStore;
 
     apply(fromCommittedUpdateCount: number, execs: CommandExecution[], model: Model): ApplyResult {
         const self = this;
@@ -161,7 +169,7 @@ class ModelUpdater {
             });
             return {};
         } else {
-            const history = self.historyProvider(fromCommittedUpdateCount);
+            const history = self.historyStore.getFrom(fromCommittedUpdateCount);
             const sync: Sync = (!history || history.length < model.getUpdateCount() - fromCommittedUpdateCount) ?
                     { isPartial: false } :
                     { isPartial: true, fromUpdateCount: fromCommittedUpdateCount, diff: [].concat(history)};            
@@ -174,12 +182,14 @@ class ModelUpdater {
                     if (result.newId != undefined && result.newId != e.newId) {
                         pathMapper.put(e.path.concat([e.newId]), e.path.concat([result.newId]));
                     }
+                    const appliedCommand = {
+                        path: path,
+                        command: e.command,
+                        newId: result.newId
+                    };
+                    self.historyStore.store(model.getUpdateCount(), appliedCommand);
                     if (sync.isPartial) {
-                        sync.diff.push({
-                            path: path,
-                            command: e.command,
-                            newId: result.newId
-                        });
+                        sync.diff.push(appliedCommand);
                     }
                 } else {
                     errors.push({
