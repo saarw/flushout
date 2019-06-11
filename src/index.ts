@@ -1,18 +1,23 @@
 
-enum CommandAction {
-    New,
-    Update,
-    Delete
+export enum CommandAction {
+    New = 'new',
+    Update = 'update',
+    Delete = 'detete'
 }
-interface Command {
+export interface Command {
     action: CommandAction;
     props?: Record<string, any>;
 }
 
 type Sync = { isPartial: true, fromUpdateCount: number, diff: CommandExecution[] } | { isPartial: false };
-
+interface ExecutionError {
+    action: CommandAction,
+    path: string[],
+    errorMessage: string
+}
 interface ApplyResult {
     sync?: Sync;
+    errors?: ExecutionError[]
 }
 
 class PathMapper {
@@ -36,55 +41,71 @@ class PathMapper {
     }
 }
 
-class Node {
-    updateCount: number;
-    props: object;
-    children: object;
-    historyProvider: (fromUpdate: number) => CommandExecution[];
+type Result = {isSuccess: true, newId?: string} | {isSuccess: false, error: string};
 
-    apply(fromCommittedUpdateCount: number, execs: CommandExecution[]): ApplyResult {
-        const self = this;
-        if (fromCommittedUpdateCount == this.updateCount) {
-            execs.forEach(e => {
-                e.command.apply(self);
-                self.updateCount += 1;
-            });
-            return {};
-        } else {
-            const history = self.historyProvider(fromCommittedUpdateCount);
-            const sync: Sync = (!history || history.length < self.updateCount - fromCommittedUpdateCount) ?
-                    { isPartial: false } :
-                    { isPartial: true, fromUpdateCount: fromCommittedUpdateCount, diff: [].concat(history)};            
-            const pathMapper = new PathMapper();
-            execs.forEach(e => {
-                const remappedPath = pathMapper.get(e.path);
-                const path = remappedPath ? remappedPath : e.path;
-                const newId = self.performCommand(path, e.command);
-                self.updateCount += 1;
-                if (newId != undefined && newId != e.newId) {
-                    pathMapper.put(e.path.concat([e.newId]), e.path.concat([newId]));
-                }
-                if (sync.isPartial) {
-                    sync.diff.push({
-                        path: path,
-                        command: e.command,
-                        newId: newId
-                    })
-                }
-            });
-            return {
-                sync: sync
-            };
-        }
+
+export interface Model {
+    getUpdateCount(): number;
+    performCommand(path: string[], command: Command): Result;
+}
+
+interface Node {
+    props: {};
+    children?: Record<string, Node>;
+    nextId: number;
+}
+
+export interface ModelData {
+    updateCount: number;
+    root: {}
+}
+
+export class Model {
+    private data: ModelData;
+
+    constructor(data: ModelData) {
+        this.data = data;
+    }
+    getUpdateCount(): number {
+        return this.data.updateCount;
     }
 
-    performCommand(path: string[], command: Command): string | undefined | { error: string } {
+    performCommand(path: string[], command: Command): Result {
         switch (command.action) {
             case CommandAction.New: {
-                return 'new';
+                const result = this.navigateToChild(path);
+                if (result.found == true) {
+                    const node = result.node;
+                    if (node.nextId == undefined) {
+                        node.nextId = 1; // Start IDs at 1 to avoid JS's 0-equality issues
+                    }
+                    const newId = node.nextId.toString();
+                    node[newId] = command.props;
+                    node.nextId += 1;
+                    return {
+                        isSuccess: true,
+                        newId: newId
+                    };
+                }
+                return {
+                    isSuccess: false,
+                    error: 'No object at path  ' + result.errorPath.toString()
+                };
             }
             case CommandAction.Update: {
-                return undefined;
+                const result = this.navigateToChild(path);
+                if (result.found == true) {
+                    Object.keys(command.props).forEach(key => {
+                        result[key] = command.props[key];
+                    });
+                    return {
+                        isSuccess: true
+                    };
+                }
+                return {
+                    isSuccess: false,
+                    error: 'No object at path ' + result.errorPath.toString()
+                };
             }
             case CommandAction.Delete: {
                 return undefined;
@@ -92,6 +113,73 @@ class Node {
             default: {
                 throw new Error('Unknown action ' + command.action);
             }
+        }
+        return {isSuccess: true};
+    }
+
+    navigateToChild(path: string[]): {found: false, errorPath: string[]} | {found: true, node: any} {
+        let n: {} = this.data.root;
+        for (let i = 0; i < path.length; i++) {
+            n = n[path[i]];
+            if (typeof n !== 'object') {
+                return {found: false, errorPath: path.slice(0, i)};
+            }
+        }
+        return {found: true, node: n};
+    }
+}
+
+class ModelUpdater {
+    
+    historyProvider: (fromUpdate: number) => CommandExecution[];
+
+    apply(fromCommittedUpdateCount: number, execs: CommandExecution[], model: Model): ApplyResult {
+        const self = this;
+        let errors: ExecutionError[] = [];
+        if (fromCommittedUpdateCount == model.getUpdateCount()) {
+            execs.forEach(e => {
+                const result = model.performCommand(e.path, e.command);
+                if (result.isSuccess == false) {
+                    errors.push({
+                        action: e.command.action,
+                        path: e.path,
+                        errorMessage: result.error
+                    });
+                }
+            });
+            return {};
+        } else {
+            const history = self.historyProvider(fromCommittedUpdateCount);
+            const sync: Sync = (!history || history.length < model.getUpdateCount() - fromCommittedUpdateCount) ?
+                    { isPartial: false } :
+                    { isPartial: true, fromUpdateCount: fromCommittedUpdateCount, diff: [].concat(history)};            
+            const pathMapper = new PathMapper();
+            execs.forEach(e => {
+                const remappedPath = pathMapper.get(e.path);
+                const path = remappedPath ? remappedPath : e.path;
+                const result = model.performCommand(path, e.command);
+                if (result.isSuccess == true) {
+                    if (result.newId != undefined && result.newId != e.newId) {
+                        pathMapper.put(e.path.concat([e.newId]), e.path.concat([result.newId]));
+                    }
+                    if (sync.isPartial) {
+                        sync.diff.push({
+                            path: path,
+                            command: e.command,
+                            newId: result.newId
+                        });
+                    }
+                } else {
+                    errors.push({
+                        action: e.command.action,
+                        path: e.path,
+                        errorMessage: result.error
+                    });
+                }
+            });
+            return {
+                sync: sync
+            };
         }
     }
 }
