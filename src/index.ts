@@ -70,18 +70,19 @@ export class Model {
         return this.data.updateCount;
     }
 
+    getData(): any {
+        return this.data;
+    }
+
     performCommand(path: string[], command: Command): Result {
         switch (command.action) {
             case CommandAction.New: {
-                const result = this.navigateToChild(path);
+                const result = this.navigateToNode(path);
                 if (result.found == true) {
                     const node = result.node;
-                    if (node.nextId == undefined) {
-                        node.nextId = 1; // Start IDs at 1 to avoid JS's 0-equality issues
-                    }
-                    const newId = node.nextId.toString();
-                    node[newId] = command.props;
-                    node.nextId += 1;
+                    const newId = (this.data.updateCount + 1).toString();
+                    node[newId] = command.props != undefined ? command.props : {};
+                    this.data.updateCount += 1;
                     return {
                         isSuccess: true,
                         newId: newId
@@ -93,11 +94,12 @@ export class Model {
                 };
             }
             case CommandAction.Update: {
-                const result = this.navigateToChild(path);
+                const result = this.navigateToNode(path);
                 if (result.found == true) {
                     Object.keys(command.props).forEach(key => {
-                        result[key] = command.props[key];
+                        result.node[key] = command.props[key];
                     });
+                    this.data.updateCount += 1;
                     return {
                         isSuccess: true
                     };
@@ -108,17 +110,27 @@ export class Model {
                 };
             }
             case CommandAction.Delete: {
-                return undefined;
+                const result = this.navigateToNode(path.slice(0, path.length -1));
+                if (result.found == true) {
+                    delete result.node[path[path.length - 1]];
+                    this.data.updateCount += 1;
+                    return {
+                        isSuccess: true
+                    };
+                }
+                return {
+                    isSuccess: false,
+                    error: 'No object at path ' + result.errorPath.toString()
+                };
             }
             default: {
                 throw new Error('Unknown action ' + command.action);
             }
         }
-        return {isSuccess: true};
     }
 
-    navigateToChild(path: string[]): {found: false, errorPath: string[]} | {found: true, node: any} {
-        let n: {} = this.data.root;
+    navigateToNode(path: string[]): {found: false, errorPath: string[]} | {found: true, node: any} {
+        let n = this.data.root;
         for (let i = 0; i < path.length; i++) {
             n = n[path[i]];
             if (typeof n !== 'object') {
