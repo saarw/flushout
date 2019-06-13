@@ -1,16 +1,16 @@
-import { Model, CommandAction } from ".";
+import { ModelImpl, CommandAction } from ".";
 
 test('add new node without initial values', () => {
   const data = {
     updateCount: 0,
     root: {}
   };
-  const model = new Model(data);
+  const model = new ModelImpl(data);
   const result = model.performCommand([], {
     action: CommandAction.New
   }) as any;
   expect(model.getUpdateCount()).toBe(1);
-  expect(model.getData().root[result.newId]).toEqual({});
+  expect(model.getRoot()[result.newId]).toEqual({});
 });
 
 test('add new node with initial values', () => {
@@ -18,13 +18,13 @@ test('add new node with initial values', () => {
       updateCount: 0,
       root: {}
     };
-    const model = new Model(data);
+    const model = new ModelImpl(data);
     const result = model.performCommand([], {
       action: CommandAction.New, 
       props: {p1: 'aValue'}
     }) as any;
     expect(model.getUpdateCount()).toBe(1);
-    expect(model.getData().root[result.newId].p1).toBe('aValue');
+    expect(model.getRoot()[result.newId].p1).toBe('aValue');
   });
 
   test('add and update node', () => {
@@ -32,7 +32,7 @@ test('add new node with initial values', () => {
       updateCount: 0,
       root: {}
     };
-    const model = new Model(data);
+    const model = new ModelImpl(data);
     const result = model.performCommand([], {
       action: CommandAction.New
     }) as any;
@@ -43,7 +43,7 @@ test('add new node with initial values', () => {
       }
     }) as any;
     expect(model.getUpdateCount()).toBe(2);
-    expect(model.getData().root[result.newId].p1).toBe('aValue');
+    expect(model.getRoot()[result.newId].p1).toBe('aValue');
   });
 
   test('add and delete node', () => {
@@ -51,7 +51,7 @@ test('add new node with initial values', () => {
       updateCount: 0,
       root: {}
     };
-    const model = new Model(data);
+    const model = new ModelImpl(data);
     const result = model.performCommand([], {
       action: CommandAction.New
     }) as any;
@@ -59,5 +59,5 @@ test('add new node with initial values', () => {
       action: CommandAction.Delete
     }) as any;
     expect(model.getUpdateCount()).toBe(2);
-    expect(model.getData().root[result.newId]).toBe(undefined);
+    expect(model.getRoot()[result.newId]).toBe(undefined);
   });

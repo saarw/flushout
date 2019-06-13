@@ -1,3 +1,4 @@
+import { NumberLiteral } from "@babel/types";
 
 export enum CommandAction {
     New = 'new',
@@ -9,7 +10,19 @@ export interface Command {
     props?: Record<string, any>;
 }
 
-type Sync = { isPartial: true, fromUpdateCount: number, diff: CommandExecution[] } | { isPartial: false };
+export class CommandExecution {
+    path: string[];
+    command: Command;
+    newId?: string;
+}
+
+export class CommandBatch {
+    fromUpdateCount: number;
+    commands: CommandExecution[];
+}
+
+
+type Sync = { isPartial: true, diff: CommandBatch } | { isPartial: false };
 interface ExecutionError {
     action: CommandAction,
     path: string[],
@@ -45,14 +58,9 @@ type Result = {isSuccess: true, newId?: string} | {isSuccess: false, error: stri
 
 
 export interface Model {
+    getDocument(): any;
     getUpdateCount(): number;
     performCommand(path: string[], command: Command): Result;
-}
-
-interface Node {
-    props: {};
-    children?: Record<string, Node>;
-    nextId: number;
 }
 
 export interface ModelData {
@@ -60,7 +68,7 @@ export interface ModelData {
     root: {}
 }
 
-export class Model {
+export class ModelImpl implements Model {
     private data: ModelData;
 
     constructor(data: ModelData) {
@@ -70,8 +78,8 @@ export class Model {
         return this.data.updateCount;
     }
 
-    getData(): any {
-        return this.data;
+    getDocument(): any {
+        return this.data.root;
     }
 
     performCommand(path: string[], command: Command): Result {
@@ -141,6 +149,90 @@ export class Model {
     }
 }
 
+export class FlushableModel implements Model {
+    private lastCommittedRoot: string;
+    private lastCommittedUpdateCount: number;
+    private model: ModelImpl;
+    private uncommitedExecutions: CommandExecution[];
+    private nextCommittedRoot?: string;
+    private nextCommittedUpdateCount?: number;
+
+    constructor(data: ModelData) {
+        this.model = new ModelImpl(data);
+        this.lastCommittedRoot = JSON.stringify(data.root);
+        this.lastCommittedUpdateCount = data.updateCount;
+    }
+
+    getDocument(): any {
+        return this.model.getDocument();
+    }
+
+    getUpdateCount(): number {
+        return this.model.getUpdateCount();
+    }
+
+    performCommand(path: string[], command: Command): Result {
+        const result = this.model.performCommand(path, command);
+        if (result.isSuccess == true) {
+            // Only store successfully applied commands in delegates
+            this.uncommitedExecutions.push({path: path, command: command, newId: result.newId});
+        }
+        return result;
+    }
+
+    beginFlush(): CommandBatch {
+        if (this.nextCommittedRoot != undefined) {
+            throw Error('Flush already in progress');
+        }
+        this.nextCommittedRoot = JSON.stringify(this.model.getDocument())
+        this.nextCommittedUpdateCount = this.model.getUpdateCount();
+        const batch = {
+            fromUpdateCount: this.lastCommittedUpdateCount,
+            commands: this.uncommitedExecutions
+        };
+        this.uncommitedExecutions = [];
+        return batch;
+    }
+
+    endFlush(diff?: CommandBatch): string | undefined {
+        if (this.nextCommittedRoot == undefined) {
+            return 'No flush in progress';
+        }
+        if (diff != undefined) {
+            return this.applyDiff(diff);
+        } 
+        this.lastCommittedRoot = this.nextCommittedRoot;
+        this.lastCommittedUpdateCount = this.nextCommittedUpdateCount;
+        this.nextCommittedRoot = undefined;
+        this.nextCommittedUpdateCount = undefined;
+        return undefined;
+    }
+
+    private applyDiff(diff: CommandBatch): undefined | string {
+        if (this.lastCommittedUpdateCount === diff.fromUpdateCount) {
+            this.model = JSON.parse(this.lastCommittedRoot);
+            const errorApplication = diff.commands.find(exec => {
+                let result = this.model.performCommand(exec.path, exec.command);
+                if (!result.isSuccess || (result.newId != exec.newId)) {
+                    return true;
+                }
+                return false;
+            });
+            if (errorApplication) {
+                return 'Failed to apply command from diff ' + JSON.stringify(errorApplication);
+            }
+            this.lastCommittedRoot = JSON.stringify(this.model.getDocument());
+            this.lastCommittedUpdateCount = this.model.getUpdateCount();
+            this.nextCommittedRoot = undefined;
+            this.nextCommittedUpdateCount = undefined;
+            return undefined;
+        }
+        return 'Failed to apply diff because its from-update-count did not match last committed';
+    }
+}
+
+
+
 interface HistoryStore {
     // Returns the history from the specified update number, if available, otherwise undefined
     getFrom(updateNum: number): CommandExecution[] | undefined;
@@ -153,11 +245,11 @@ class ModelUpdater {
     
     historyStore: HistoryStore;
 
-    apply(fromCommittedUpdateCount: number, execs: CommandExecution[], model: Model): ApplyResult {
+    apply(batch: CommandBatch, model: Model): ApplyResult {
         const self = this;
         let errors: ExecutionError[] = [];
-        if (fromCommittedUpdateCount == model.getUpdateCount()) {
-            execs.forEach(e => {
+        if (batch.fromUpdateCount == model.getUpdateCount()) {
+            batch.commands.forEach(e => {
                 const result = model.performCommand(e.path, e.command);
                 if (result.isSuccess == false) {
                     errors.push({
@@ -169,12 +261,12 @@ class ModelUpdater {
             });
             return {};
         } else {
-            const history = self.historyStore.getFrom(fromCommittedUpdateCount);
-            const sync: Sync = (!history || history.length < model.getUpdateCount() - fromCommittedUpdateCount) ?
+            const history = self.historyStore.getFrom(batch.fromUpdateCount);
+            const sync: Sync = (!history || history.length < model.getUpdateCount() - batch.fromUpdateCount) ?
                     { isPartial: false } :
-                    { isPartial: true, fromUpdateCount: fromCommittedUpdateCount, diff: [].concat(history)};            
+                    { isPartial: true, diff: {fromUpdateCount: batch.fromUpdateCount, commands: [].concat(history)}};            
             const pathMapper = new PathMapper();
-            execs.forEach(e => {
+            batch.commands.forEach(e => {
                 const remappedPath = pathMapper.get(e.path);
                 const path = remappedPath ? remappedPath : e.path;
                 const result = model.performCommand(path, e.command);
@@ -182,14 +274,14 @@ class ModelUpdater {
                     if (result.newId != undefined && result.newId != e.newId) {
                         pathMapper.put(e.path.concat([e.newId]), e.path.concat([result.newId]));
                     }
-                    const appliedCommand = {
+                    const appliedExecution = {
                         path: path,
                         command: e.command,
                         newId: result.newId
                     };
-                    self.historyStore.store(model.getUpdateCount(), appliedCommand);
+                    self.historyStore.store(model.getUpdateCount(), appliedExecution);
                     if (sync.isPartial) {
-                        sync.diff.push(appliedCommand);
+                        sync.diff.commands.push(appliedExecution);
                     }
                 } else {
                     errors.push({
@@ -223,8 +315,3 @@ export class DeleteCommand implements Command {
     action = CommandAction.Delete;
 }
 
-export class CommandExecution {
-    path: string[];
-    command: Command;
-    newId?: string;
-}

@@ -1,5 +1,5 @@
 {
-  "name": "eventual-model",
+  "name": "flusho",
   "version": "1.0.0",
   "description": "Data model with eventually consistent views updated through event-sourcing.",
   "main": "index.js",
