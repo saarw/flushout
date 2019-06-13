@@ -6,7 +6,7 @@ Flusho was built to support single-page applications that can maintain a copy of
    
 Some design properties of Flusho
 * Minimize network traffic by only initializing clients with current model state and sending future updates
-* Support limiting command history and store command history separately from current model state
-* Make commands and model update inspectable and interceptable to support validation
+* Support limiting update history and store update history separately from current model state
 * Be agnostic about network transport (Flushes can be performed over regular fetch calls or websockets etc.)
+* Make commands and model update inspectable and interceptable to support validation
 * Reduce performance load on the server in favour of performing more work on the client
