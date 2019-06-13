@@ -1,8 +1,8 @@
 # flusho
-Flusho is an event-sourcing based alternative to REST/GraphQL for exposing and updating a data model on the server from one or more clients. The clients interact with a local copy of the data model that periodically synchronizes local changes with the remote model.
+Flusho is an event-sourcing based alternative to REST/GraphQL for single-page applications. Clients interact with a local copy of a remote data model and periodically synchronize local changes with the remote model.
 
 ## Background
-Flusho was built to support single-page applications that can maintain a copy of its data model state to support low-latency model interactions, offline capabilities of progressive web applications, and to be a good fit for queue-based serverless backends.   
+Flusho was built for clients that can maintain a copy of its data model state to support low-latency model interactions, offline capabilities of progressive web applications, and to be a good fit for queue-based serverless backends.   
    
 Some design properties of Flusho
 * Minimize network traffic by only initializing clients with current model state and sending future updates
