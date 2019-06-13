@@ -9,3 +9,4 @@ Some design properties of Flusho
 * Support limiting command history and store command history separately from current model state
 * Make commands and model update inspectable and interceptable to support validation
 * Be agnostic about network transport (Flushes can be performed over regular fetch calls or websockets etc.)
+* Reduce performance load on the server in favour of performing more work on the client
