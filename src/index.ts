@@ -1,4 +1,34 @@
-import { NumberLiteral } from "@babel/types";
+type Path = string;
+
+class Paths {
+    static getParent(path: Path): Path | undefined {
+        const n = path.lastIndexOf('/');
+        if (n > 0) {
+            return path.substring(0, n - 1);
+        }
+        return undefined;
+    }
+
+    static isRoot(path: Path): boolean {
+        return path == undefined || path === '' || path === '/';
+    }
+
+    static remainder(base: Path, path: Path): Path {
+        return path.substring(base.length);
+    }
+
+    static concat(path1: Path, path2: Path): Path {
+        return path1.concat(path2);
+    }
+
+    static fromString(path: Path): string {
+        return path;
+    }
+
+    static toString(s: string): Path {
+        return s;
+    }
+}
 
 export enum CommandAction {
     New = 'new',
@@ -10,22 +40,21 @@ export interface Command {
     props?: Record<string, any>;
 }
 
-export class CommandExecution {
-    path: string[];
+export interface CommandExecution {
+    path: Path;
     command: Command;
     newId?: string;
 }
 
-export class CommandBatch {
+export interface CommandBatch {
     fromUpdateCount: number;
     commands: CommandExecution[];
 }
 
-
 type Sync = { isPartial: true, diff: CommandBatch } | { isPartial: false };
 interface ExecutionError {
     action: CommandAction,
-    path: string[],
+    path: Path,
     errorMessage: string
 }
 interface ApplyResult {
@@ -34,23 +63,22 @@ interface ApplyResult {
 }
 
 class PathMapper {
-    remappedPaths = {}
-    get(path: string[]): string[] | undefined {
+    mappedPaths: Record<string, Path> = {};
+    get(path: Path): Path | undefined {
         let p = path;
-        while (p && p.length > 0) {
-            const pStr = p.toString();
-            const remappedSection = this.remappedPaths[pStr];
-            if (remappedSection) {
-                const remappedPath = remappedSection.concat(path.slice(p.length, path.length));
-                this.remappedPaths[path.toString()] = remappedPath;
+        while (!Paths.isRoot(p)) {
+            const mappedSection = this.mappedPaths[Paths.toString(p)];
+            if (mappedSection != undefined) {
+                const remappedPath = Paths.concat(mappedSection, Paths.remainder(path, p));
+                this.mappedPaths[Paths.toString(path)] = remappedPath;
                 return remappedPath;
             }
-            p = path.slice(0, p.length - 1);
+            p = Paths.getParent(p); 
         }
         return undefined;
     }
-    put(path: string[], remappedPath: string[]) {
-        this.remappedPaths[path.toString()] = remappedPath.toString();
+    put(path: Path, remappedPath: Path) {
+        this.mappedPaths[Paths.toString(path)] = remappedPath;
     }
 }
 
@@ -60,7 +88,7 @@ type Result = {isSuccess: true, newId?: string} | {isSuccess: false, error: stri
 export interface Model {
     getDocument(): any;
     getUpdateCount(): number;
-    performCommand(path: string[], command: Command): Result;
+    performCommand(path: Path, command: Command): Result;
 }
 
 export interface ModelData {
@@ -82,7 +110,7 @@ export class ModelImpl implements Model {
         return this.data.root;
     }
 
-    performCommand(path: string[], command: Command): Result {
+    performCommand(path: Path, command: Command): Result {
         switch (command.action) {
             case CommandAction.New: {
                 const result = this.navigateToNode(path);
@@ -137,7 +165,7 @@ export class ModelImpl implements Model {
         }
     }
 
-    private navigateToNode(path: string[]): {found: false, errorPath: string[]} | {found: true, node: any} {
+    private navigateToNode(path: Path): {found: false, errorPath: Path} | {found: true, node: any} {
         let n = this.data.root;
         for (let i = 0; i < path.length; i++) {
             n = n[path[i]];
@@ -171,7 +199,7 @@ export class FlushableModel implements Model {
         return this.model.getUpdateCount();
     }
 
-    performCommand(path: string[], command: Command): Result {
+    performCommand(path: Path, command: Command): Result {
         const result = this.model.performCommand(path, command);
         if (result.isSuccess == true) {
             // Only store successfully applied commands in delegates
@@ -244,13 +272,14 @@ interface HistoryStore {
 class ModelUpdater {
     
     historyStore: HistoryStore;
+    model: Model;
 
-    apply(batch: CommandBatch, model: Model): ApplyResult {
+    apply(batch: CommandBatch): ApplyResult {
         const self = this;
         let errors: ExecutionError[] = [];
-        if (batch.fromUpdateCount == model.getUpdateCount()) {
+        if (batch.fromUpdateCount == this.model.getUpdateCount()) {
             batch.commands.forEach(e => {
-                const result = model.performCommand(e.path, e.command);
+                const result = this.model.performCommand(e.path, e.command);
                 if (result.isSuccess == false) {
                     errors.push({
                         action: e.command.action,
@@ -262,24 +291,24 @@ class ModelUpdater {
             return {};
         } else {
             const history = self.historyStore.getFrom(batch.fromUpdateCount);
-            const sync: Sync = (!history || history.length < model.getUpdateCount() - batch.fromUpdateCount) ?
+            const sync: Sync = (!history || history.length < this.model.getUpdateCount() - batch.fromUpdateCount) ?
                     { isPartial: false } :
-                    { isPartial: true, diff: {fromUpdateCount: batch.fromUpdateCount, commands: [].concat(history)}};            
+                    { isPartial: true, diff: {fromUpdateCount: batch.fromUpdateCount, commands: [...history]}};            
             const pathMapper = new PathMapper();
             batch.commands.forEach(e => {
                 const remappedPath = pathMapper.get(e.path);
                 const path = remappedPath ? remappedPath : e.path;
-                const result = model.performCommand(path, e.command);
+                const result = this.model.performCommand(path, e.command);
                 if (result.isSuccess == true) {
                     if (result.newId != undefined && result.newId != e.newId) {
-                        pathMapper.put(e.path.concat([e.newId]), e.path.concat([result.newId]));
+                        pathMapper.put(Paths.concat(e.path, e.newId), Paths.concat(e.path, result.newId));
                     }
                     const appliedExecution = {
                         path: path,
                         command: e.command,
                         newId: result.newId
                     };
-                    self.historyStore.store(model.getUpdateCount(), appliedExecution);
+                    self.historyStore.store(this.model.getUpdateCount(), appliedExecution);
                     if (sync.isPartial) {
                         sync.diff.commands.push(appliedExecution);
                     }
@@ -296,22 +325,5 @@ class ModelUpdater {
             };
         }
     }
-}
-
-export class NewCommand implements Command {
-    action = CommandAction.New;
-    props: Record<string, any>;
-    constructor(initialProps?: Record<string, any>) {
-        this.props = initialProps;
-    }
-}
-
-export class UpdateCommand implements Command {
-    action = CommandAction.Update;
-    constructor(public props: Record<string, any>) {}
-}
-
-export class DeleteCommand implements Command {
-    action = CommandAction.Delete;
 }
 
