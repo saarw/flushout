@@ -1,7 +1,7 @@
 {
-  "name": "flusho",
+  "name": "flushout",
   "version": "1.0.0",
-  "description": "Data model with eventually consistent views updated through event-sourcing.",
+  "description": "Event-sourcing based data model that lets client-local copies synchronize with a remote source model.",
   "main": "index.js",
   "scripts": {
     "test": "jest"
