@@ -11,30 +11,33 @@ export interface Command {
     props?: Record<string, any>;
 }
 
-export interface CommandExecution {
+export interface CommandCompletion {
     command: Command;
     newId?: string;
 }
 
-export interface CommandBatch {
-    fromUpdateCount: number;
-    commands: CommandExecution[];
+export interface CompletionBatch {
+    from: number;
+    completions: CommandCompletion[];
 }
 
-type Sync = { isPartial: true, diff: CommandBatch } | { isPartial: false };
-interface ExecutionError {
+type Sync = { isPartial: true, diff: CompletionBatch } | { isPartial: false };
+interface CompletionError {
     action: CommandAction,
     path: string[],
     errorMessage: string
 }
 interface ApplyResult {
     sync?: Sync;
-    errors?: ExecutionError[]
+    errors?: CompletionError[]
 }
 
 class PathMapper {
     mappedPaths: Record<string, string[]> = {};
     get(path: string[]): string[] | undefined {
+        if (Object.keys(this.mappedPaths).length == 0) {
+            return undefined;
+        }
         let p = path;
         while (p.length > 0) {
             const mappedSection = this.mappedPaths[p.toString()];
@@ -69,8 +72,8 @@ export interface ModelData {
 export class ModelImpl implements Model {
     private data: ModelData;
 
-    constructor(data: ModelData) {
-        this.data = data;
+    constructor(data?: ModelData) {
+        this.data = data ? data : { updateCount: 0, root: {} };
     }
     getUpdateCount(): number {
         return this.data.updateCount;
@@ -152,7 +155,7 @@ export class FlushableModel implements Model {
     private lastCommittedRoot: string;
     private lastCommittedUpdateCount: number;
     private model: ModelImpl;
-    private uncommitedExecutions: CommandExecution[];
+    private uncommittedCompletions: CommandCompletion[];
     private nextCommittedRoot?: string;
     private nextCommittedUpdateCount?: number;
 
@@ -174,26 +177,26 @@ export class FlushableModel implements Model {
         const result = this.model.performCommand(command);
         if (result.isSuccess == true) {
             // Only store successfully applied commands in delegates
-            this.uncommitedExecutions.push({command: command, newId: result.newId});
+            this.uncommittedCompletions.push({command: command, newId: result.newId});
         }
         return result;
     }
 
-    beginFlush(): CommandBatch {
+    beginFlush(): CompletionBatch {
         if (this.nextCommittedRoot != undefined) {
             throw Error('Flush already in progress');
         }
         this.nextCommittedRoot = JSON.stringify(this.model.getDocument())
         this.nextCommittedUpdateCount = this.model.getUpdateCount();
-        const batch = {
-            fromUpdateCount: this.lastCommittedUpdateCount,
-            commands: this.uncommitedExecutions
+        const batch: CompletionBatch = {
+            from: this.lastCommittedUpdateCount,
+            completions: this.uncommittedCompletions
         };
-        this.uncommitedExecutions = [];
+        this.uncommittedCompletions = [];
         return batch;
     }
 
-    endFlush(diff?: CommandBatch): string | undefined {
+    endFlush(diff?: CompletionBatch): string | undefined {
         if (this.nextCommittedRoot == undefined) {
             return 'No flush in progress';
         }
@@ -207,10 +210,10 @@ export class FlushableModel implements Model {
         return undefined;
     }
 
-    private applyDiff(diff: CommandBatch): undefined | string {
-        if (this.lastCommittedUpdateCount === diff.fromUpdateCount) {
+    private applyDiff(diff: CompletionBatch): undefined | string {
+        if (this.lastCommittedUpdateCount === diff.from) {
             this.model = JSON.parse(this.lastCommittedRoot);
-            const errorApplication = diff.commands.find(exec => {
+            const errorApplication = diff.completions.find(exec => {
                 let result = this.model.performCommand(exec.command);
                 if (!result.isSuccess || (result.newId != exec.newId)) {
                     return true;
@@ -232,76 +235,111 @@ export class FlushableModel implements Model {
 
 
 
-interface HistoryStore {
+export interface HistoryStore {
     // Returns the history from the specified update number, if available, otherwise undefined
-    getFrom(updateNum: number): CommandExecution[] | undefined;
+    get(from: number, to: number): CommandCompletion[] | undefined;
 
     // Stores the execution with its model udate number
-    store(updateNum: number, command: CommandExecution);
+    store(update: number, command: CommandCompletion);
 }
 
-class ModelUpdater {
+function applyBatch(model: Model, batch: CompletionBatch, pathMapper: PathMapper): 
+    undefined | { applied: CompletionBatch, errors?: CompletionError[] } {
+    let modifiedBatch = undefined;
+    let errors = undefined;
+    batch.completions.forEach((e, idx) => {
+        let path = e.command.path || [];
+        const mapped = pathMapper.get(path);
+        const command = mapped ? {
+                path: mapped,
+                action: e.command.action,
+                props: e.command.props
+            } : e.command;
+        path = mapped || path;
+        let isModified = mapped != undefined;
+        const result = model.performCommand(command);
+        if (result.isSuccess == true) {
+            if (result.newId != undefined && result.newId != e.newId) {
+                isModified = true;
+                pathMapper.put(path.concat(e.newId), path.concat(result.newId));
+            }
+            if (modifiedBatch != undefined || isModified) {
+                modifiedBatch = modifiedBatch || batch.completions.slice(0, idx);
+                const appliedExecution = {
+                    command: command,
+                    newId: result.newId
+                };
+                modifiedBatch.push(appliedExecution)
+            } 
+        } else {
+            modifiedBatch = modifiedBatch || batch.completions.slice(0, idx);
+            if (errors == undefined) {
+                errors = [];
+            }
+            errors.push({
+                action: e.command.action,
+                path: path,
+                errorMessage: result.error
+            });
+        }
+    });
+    if (modifiedBatch) {
+        return {
+            applied: {
+                from: batch.from, 
+                completions: modifiedBatch
+            },
+            errors: errors
+        };
+    } else {
+        return undefined;
+    }
+}
+
+export class ModelUpdater {
     
-    historyStore: HistoryStore;
+    historyStore?: HistoryStore;
     model: Model;
 
-    apply(batch: CommandBatch): ApplyResult {
-        const self = this;
-        let errors: ExecutionError[] = [];
-        if (batch.fromUpdateCount == this.model.getUpdateCount()) {
-            batch.commands.forEach(e => {
-                const result = this.model.performCommand(e.command);
-                if (result.isSuccess == false) {
-                    errors.push({
-                        action: e.command.action,
-                        path: e.command.path,
-                        errorMessage: result.error
-                    });
-                }
-            });
-            return {};
-        } else {
-            const history = self.historyStore.getFrom(batch.fromUpdateCount);
-            const sync: Sync = (!history || history.length < this.model.getUpdateCount() - batch.fromUpdateCount) ?
-                    { isPartial: false } :
-                    { isPartial: true, diff: {fromUpdateCount: batch.fromUpdateCount, commands: [...history]}};            
-            const pathMapper = new PathMapper();
-            batch.commands.forEach(e => {
-                let path = e.command.path || [];
-                const remappedPath = pathMapper.get(path);
-                if (remappedPath) {
-                    path = remappedPath;
-                }
-                const command = {
-                        path: path,
-                        action: e.command.action,
-                        props: e.command.props
+    constructor(model: Model, historyStore?: HistoryStore) {
+        this.model = model;
+        this.historyStore = historyStore;
+    }
+
+    apply(batch: CompletionBatch): ApplyResult {
+        const startUpdate = this.model.getUpdateCount();
+
+        const pathMapper = new PathMapper();
+        const result = applyBatch(this.model, batch, pathMapper);
+        const applied = result == undefined ? batch : result.applied;
+
+        let sync = undefined;
+        if (batch.from != startUpdate) {
+            const historyDiff = this.historyStore ? this.historyStore.get(batch.from, startUpdate) : undefined;
+            if (historyDiff == undefined || (historyDiff.length != startUpdate - batch.from)) {
+                sync = {
+                    isPartial: false
                 };
-                const result = this.model.performCommand(command);
-                if (result.isSuccess == true) {
-                    if (result.newId != undefined && result.newId != e.newId) {
-                        pathMapper.put(path.concat(e.newId), path.concat(result.newId));
-                    }
-                    const appliedExecution = {
-                        command: command,
-                        newId: result.newId
-                    };
-                    self.historyStore.store(this.model.getUpdateCount(), appliedExecution);
-                    if (sync.isPartial) {
-                        sync.diff.commands.push(appliedExecution);
-                    }
-                } else {
-                    errors.push({
-                        action: e.command.action,
-                        path: e.command.path,
-                        errorMessage: result.error
-                    });
-                }
-            });
-            return {
-                sync: sync
-            };
+            } else {
+                const diff: CompletionBatch = {
+                    from: batch.from,
+                    completions: historyDiff.concat(applied.completions)
+                };
+                sync = {
+                    isPartial: true,
+                    diff: diff
+                };
+            }
         }
+        if (this.historyStore) {
+            applied.completions.forEach((e, i: number) => {
+                this.historyStore.store(startUpdate + i, e);
+            });
+        }
+        return {
+            sync: sync,
+            errors: result == undefined ? undefined : result.errors
+        };
     }
 }
 
