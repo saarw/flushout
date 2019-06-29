@@ -21,7 +21,27 @@ export interface CompletionBatch {
     completions: CommandCompletion[];
 }
 
-type Sync = { isPartial: true, diff: CompletionBatch } | { isPartial: false };
+export interface Model {
+    getDocument(): any;
+    getUpdateCount(): number;
+    performCommand(command: Command): Result;
+}
+
+export interface ModelData {
+    updateCount: number;
+    document: {}
+}
+
+type Sync = { 
+        isPartial: true, 
+        diff: CompletionBatch,
+        mappedPaths?: Record<string, string[]>
+    } | 
+    { 
+        isPartial: false,
+        latest: ModelData,
+        mappedPaths?: Record<string, string[]>
+    };
 interface CompletionError {
     action: CommandAction,
     path: string[],
@@ -33,54 +53,53 @@ interface ApplyResult {
 }
 
 class PathMapper {
-    mappedPaths: Record<string, string[]> = {};
-    get(path: string[]): string[] | undefined {
-        if (Object.keys(this.mappedPaths).length == 0) {
+    private readonly mappedPaths: Record<string, string[]>;
+    private isEmpty: boolean;
+    constructor(mappedPaths?: Record<string, string[]>) {
+        this.mappedPaths = mappedPaths ? mappedPaths : {};
+        this.isEmpty = Object.keys(this.mappedPaths).length === 0;
+    }
+    
+    public get(path: string[]): string[] | undefined {
+        if (this.isEmpty) {
             return undefined;
         }
         let p = path;
         while (p.length > 0) {
             const mappedSection = this.mappedPaths[p.toString()];
             if (mappedSection != undefined) {
-                const remappedPath = mappedSection.concat(path.slice(p.length, path.length));
-                this.mappedPaths[path.toString()] = remappedPath;
-                return remappedPath;
+                const mappedPath = mappedSection.concat(path.slice(p.length, path.length));
+                this.put(path, mappedPath);
+                return mappedPath;
             }
             p = p.slice(0, p.length - 1); 
         }
         return undefined;
     }
-    put(path: string[], remappedPath: string[]) {
+    public put(path: string[], remappedPath: string[]) {
+        this.isEmpty = false;
         this.mappedPaths[path.toString()] = remappedPath;
+    }
+    public getMappings(): Record<string, string[]> {
+        return this.mappedPaths;
     }
 }
 
 type Result = {isSuccess: true, newId?: string} | {isSuccess: false, error: string};
 
 
-export interface Model {
-    getDocument(): any;
-    getUpdateCount(): number;
-    performCommand(command: Command): Result;
-}
-
-export interface ModelData {
-    updateCount: number;
-    root: {}
-}
-
 export class ModelImpl implements Model {
     private data: ModelData;
 
     constructor(data?: ModelData) {
-        this.data = data ? data : { updateCount: 0, root: {} };
+        this.data = data ? data : { updateCount: 0, document: {} };
     }
     getUpdateCount(): number {
         return this.data.updateCount;
     }
 
     getDocument(): any {
-        return this.data.root;
+        return this.data.document;
     }
 
     performCommand(command: Command): Result {
@@ -140,7 +159,7 @@ export class ModelImpl implements Model {
     }
 
     private navigateToNode(path: string[]): {found: false, errorPath: string[]} | {found: true, node: any} {
-        let n: any = this.data.root;
+        let n: any = this.data.document;
         for (let i = 0; i < path.length; i++) {
             n = n[path[i]];
             if (typeof n !== 'object') {
@@ -152,16 +171,16 @@ export class ModelImpl implements Model {
 }
 
 export class FlushableModel implements Model {
-    private lastCommittedRoot: string;
+    private lastCommittedDocument: string;
     private lastCommittedUpdateCount: number;
     private model: ModelImpl;
     private uncommittedCompletions: CommandCompletion[];
-    private nextCommittedRoot?: string;
+    private nextCommittedDocument?: string;
     private nextCommittedUpdateCount?: number;
 
     constructor(data: ModelData) {
         this.model = new ModelImpl(data);
-        this.lastCommittedRoot = JSON.stringify(data.root);
+        this.lastCommittedDocument = JSON.stringify(data.document);
         this.lastCommittedUpdateCount = data.updateCount;
     }
 
@@ -183,10 +202,10 @@ export class FlushableModel implements Model {
     }
 
     beginFlush(): CompletionBatch {
-        if (this.nextCommittedRoot != undefined) {
+        if (this.nextCommittedDocument != undefined) {
             throw Error('Flush already in progress');
         }
-        this.nextCommittedRoot = JSON.stringify(this.model.getDocument())
+        this.nextCommittedDocument = JSON.stringify(this.model.getDocument())
         this.nextCommittedUpdateCount = this.model.getUpdateCount();
         const batch: CompletionBatch = {
             from: this.lastCommittedUpdateCount,
@@ -196,37 +215,46 @@ export class FlushableModel implements Model {
         return batch;
     }
 
-    endFlush(diff?: CompletionBatch): string | undefined {
-        if (this.nextCommittedRoot == undefined) {
+    endFlush(sync?: Sync): string | undefined {
+        if (this.nextCommittedDocument == undefined) {
             return 'No flush in progress';
         }
-        if (diff != undefined) {
-            return this.applyDiff(diff);
-        } 
-        this.lastCommittedRoot = this.nextCommittedRoot;
-        this.lastCommittedUpdateCount = this.nextCommittedUpdateCount;
-        this.nextCommittedRoot = undefined;
-        this.nextCommittedUpdateCount = undefined;
+        if (!sync) {
+            this.lastCommittedDocument = this.nextCommittedDocument;
+            this.lastCommittedUpdateCount = this.nextCommittedUpdateCount;
+            this.nextCommittedDocument = undefined;
+            this.nextCommittedUpdateCount = undefined;
+        } else {
+            if (sync.isPartial == true) {
+                const err = this.applyDiff(sync.diff);
+                if (err) {
+                    return err;
+                }
+            } else {
+                this.model = new ModelImpl(sync.latest);
+            }
+            this.lastCommittedDocument = JSON.stringify(this.model.getDocument());
+            this.lastCommittedUpdateCount = this.model.getUpdateCount();
+
+            const uncommittedApplied = applyCompletions(this.model, this.uncommittedCompletions, new PathMapper(sync.mappedPaths));
+            if (uncommittedApplied) {
+                this.uncommittedCompletions = uncommittedApplied.applied.completions;
+                // Silently discard errors in uncommitted
+            }
+            
+            this.nextCommittedDocument = undefined;
+            this.nextCommittedUpdateCount = undefined;
+        }
         return undefined;
     }
 
     private applyDiff(diff: CompletionBatch): undefined | string {
         if (this.lastCommittedUpdateCount === diff.from) {
-            this.model = JSON.parse(this.lastCommittedRoot);
-            const errorApplication = diff.completions.find(exec => {
-                let result = this.model.performCommand(exec.command);
-                if (!result.isSuccess || (result.newId != exec.newId)) {
-                    return true;
-                }
-                return false;
-            });
-            if (errorApplication) {
-                return 'Failed to apply command from diff ' + JSON.stringify(errorApplication);
+            this.model = JSON.parse(this.lastCommittedDocument);
+            const diffApplied = applyCompletions(this.model, diff.completions, new PathMapper());
+            if (diffApplied && diffApplied.errors) {
+                return 'Errors when applying diff on previous model';
             }
-            this.lastCommittedRoot = JSON.stringify(this.model.getDocument());
-            this.lastCommittedUpdateCount = this.model.getUpdateCount();
-            this.nextCommittedRoot = undefined;
-            this.nextCommittedUpdateCount = undefined;
             return undefined;
         }
         return 'Failed to apply diff because its from-update-count did not match last committed';
@@ -243,11 +271,12 @@ export interface HistoryStore {
     store(update: number, command: CommandCompletion);
 }
 
-function applyBatch(model: Model, batch: CompletionBatch, pathMapper: PathMapper): 
+function applyCompletions(model: Model, completions: CommandCompletion[], pathMapper: PathMapper): 
     undefined | { applied: CompletionBatch, errors?: CompletionError[] } {
+    const startUpdate = model.getUpdateCount();
     let modifiedBatch = undefined;
     let errors = undefined;
-    batch.completions.forEach((e, idx) => {
+    completions.forEach((e, idx) => {
         let path = e.command.path || [];
         const mapped = pathMapper.get(path);
         const command = mapped ? {
@@ -264,7 +293,7 @@ function applyBatch(model: Model, batch: CompletionBatch, pathMapper: PathMapper
                 pathMapper.put(path.concat(e.newId), path.concat(result.newId));
             }
             if (modifiedBatch != undefined || isModified) {
-                modifiedBatch = modifiedBatch || batch.completions.slice(0, idx);
+                modifiedBatch = modifiedBatch || completions.slice(0, idx);
                 const appliedExecution = {
                     command: command,
                     newId: result.newId
@@ -272,7 +301,7 @@ function applyBatch(model: Model, batch: CompletionBatch, pathMapper: PathMapper
                 modifiedBatch.push(appliedExecution)
             } 
         } else {
-            modifiedBatch = modifiedBatch || batch.completions.slice(0, idx);
+            modifiedBatch = modifiedBatch || completions.slice(0, idx);
             if (errors == undefined) {
                 errors = [];
             }
@@ -286,7 +315,7 @@ function applyBatch(model: Model, batch: CompletionBatch, pathMapper: PathMapper
     if (modifiedBatch) {
         return {
             applied: {
-                from: batch.from, 
+                from: startUpdate, 
                 completions: modifiedBatch
             },
             errors: errors
@@ -296,7 +325,7 @@ function applyBatch(model: Model, batch: CompletionBatch, pathMapper: PathMapper
     }
 }
 
-export class ModelUpdater {
+export class Origin {
     
     historyStore?: HistoryStore;
     model: Model;
@@ -310,7 +339,7 @@ export class ModelUpdater {
         const startUpdate = this.model.getUpdateCount();
 
         const pathMapper = new PathMapper();
-        const result = applyBatch(this.model, batch, pathMapper);
+        const result = applyCompletions(this.model, batch.completions, pathMapper);
         const applied = result == undefined ? batch : result.applied;
 
         let sync = undefined;
@@ -318,7 +347,12 @@ export class ModelUpdater {
             const historyDiff = this.historyStore ? this.historyStore.get(batch.from, startUpdate) : undefined;
             if (historyDiff == undefined || (historyDiff.length != startUpdate - batch.from)) {
                 sync = {
-                    isPartial: false
+                    isPartial: false,
+                    mappedPath: pathMapper.getMappings(),
+                    latest: {
+                        updateCount: this.model.getUpdateCount(),
+                        document: this.model.getDocument()
+                    }
                 };
             } else {
                 const diff: CompletionBatch = {
@@ -327,7 +361,8 @@ export class ModelUpdater {
                 };
                 sync = {
                     isPartial: true,
-                    diff: diff
+                    diff: diff,
+                    mappedPath: pathMapper.getMappings()
                 };
             }
         }

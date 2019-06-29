@@ -1,4 +1,11 @@
-import { ModelImpl, CommandAction, CompletionBatch, ModelUpdater, HistoryStore, CommandCompletion } from ".";
+import {
+  CommandAction,
+  CommandCompletion,
+  CompletionBatch,
+  HistoryStore,
+  ModelImpl,
+  Origin
+  } from '.';
 
 describe('ModelImpl', () => {
   test('add new node without initial values', () => {
@@ -26,8 +33,8 @@ describe('ModelImpl', () => {
       action: CommandAction.New
     }) as any;
     const result2 = model.performCommand({
-      path: [result.newId],
       action: CommandAction.Update,
+      path: [result.newId],
       props: {
         p1: 'aValue'
       }
@@ -43,8 +50,8 @@ describe('ModelImpl', () => {
       action: CommandAction.New
     }) as any;
     const result2 = model.performCommand({
-      path: result.newId,
-      action: CommandAction.Delete
+      action: CommandAction.Delete,
+      path: result.newId
     }) as any;
     expect(model.getUpdateCount()).toBe(2);
     expect(model.getDocument()[result.newId]).toBe(undefined);
@@ -56,16 +63,16 @@ describe('ModelImpl', () => {
       action: CommandAction.New
     }) as any;
     const result2 = model.performCommand({
-      path: [result.newId],
-      action: CommandAction.New
+      action: CommandAction.New,
+      path: [result.newId]
     }) as any;
     const result3 = model.performCommand({
-      path: [result.newId, result2.newId],
-      action: CommandAction.New
+      action: CommandAction.New,
+      path: [result.newId, result2.newId]
     }) as any;
     const result4 = model.performCommand({
-      path: [result.newId, result2.newId],
-      action: CommandAction.Delete
+      action: CommandAction.Delete,
+      path: [result.newId, result2.newId]
     }) as any;
     expect(model.getUpdateCount()).toBe(4);
     expect(model.getDocument()[result.newId][result2.newId]).toBe(undefined);
@@ -76,17 +83,17 @@ describe('ModelImpl', () => {
 describe('ModelUpdater', () => {
   test('adding node returns ok', () => {
     const model =new ModelImpl();
-    const updater = new ModelUpdater(model);
+    const updater = new Origin(model);
     const batch: CompletionBatch = {
-      from: 0,
       completions: [{
           command: {
             action: CommandAction.New
           },
           newId: '1'
-      }]
+      }],
+      from: 0
     };
-    let result = updater.apply(batch);
+    const result = updater.apply(batch);
     
     expect(model.getUpdateCount()).toBe(1);
     expect(result.sync).toBeUndefined();
@@ -96,15 +103,15 @@ describe('ModelUpdater', () => {
 
   test('merge two add commands', () => {
     const model = new ModelImpl();
-    const updater = new ModelUpdater(model);
+    const updater = new Origin(model);
     const batch: CompletionBatch = {
-      from: 0,
       completions: [{
           command: {
             action: CommandAction.New
           },
           newId: '1'
-      }]
+      }],
+      from: 0
     };
     updater.apply(batch);
     updater.apply(batch);
@@ -116,19 +123,18 @@ describe('ModelUpdater', () => {
 
   test('merge two add commands without history produces full sync', () => {
     const model = new ModelImpl();
-    const updater = new ModelUpdater(model);
+    const updater = new Origin(model);
     const batch: CompletionBatch = {
-      from: 0,
       completions: [{
           command: {
             action: CommandAction.New
           },
           newId: '1'
-      }]
+      }],
+      from: 0
     };
     updater.apply(batch);
-    let result = updater.apply(batch);
-    
+    const result = updater.apply(batch);
     
     expect(result.sync).toBeDefined();
     expect(result.sync.isPartial).toBe(false);
@@ -137,18 +143,18 @@ describe('ModelUpdater', () => {
   test('merge two add commands with history produces partial sync', () => {
     const model = new ModelImpl();
     const historyStore: HistoryStore = createHistoryStore();
-    const updater = new ModelUpdater(model, historyStore);
+    const updater = new Origin(model, historyStore);
     const batch: CompletionBatch = {
-      from: 0,
       completions: [{
           command: {
             action: CommandAction.New
           },
           newId: '1'
-      }]
+      }],
+      from: 0
     };
     updater.apply(batch);
-    let result = updater.apply(batch);
+    const result = updater.apply(batch);
     
     expect(result.sync).toBeDefined();
     expect(result.sync.isPartial).toBe(true);
@@ -164,7 +170,7 @@ function createHistoryStore(): HistoryStore {
       return this.history.slice(from, to);
     },
     store(updateNum: number, command: CommandCompletion) {
-      if (this.history.length == updateNum) {
+      if (this.history.length === updateNum) {
         this.history.push(command);
       }
     }
