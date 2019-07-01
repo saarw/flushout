@@ -12,6 +12,7 @@ export class Proxy<T extends object> implements Model<T> {
     private nextCommittedUpdateCount?: number;
     constructor(snapshot: Snapshot<T>) {
         this.model = new Inner(snapshot);
+        this.uncommittedCompletions = [];
         this.lastCommittedDocument = JSON.stringify(snapshot.document);
         this.lastCommittedUpdateCount = snapshot.updateCount;
     }
