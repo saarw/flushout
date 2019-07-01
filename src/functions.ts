@@ -1,5 +1,5 @@
 import { Model, CommandCompletion, CompletionBatch, CompletionError } from "./types";
-import { PathMapper } from "./pathmapper";
+import { PathMapper } from "./path-mapper";
 
 export function applyCompletions(model: Model, completions: CommandCompletion[], pathMapper: PathMapper): 
     undefined | { applied: CompletionBatch, errors?: CompletionError[] } {
