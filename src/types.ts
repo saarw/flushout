@@ -7,7 +7,7 @@ export type Sync = {
     } | 
     { 
         isPartial: false,
-        latest: Snapshot,
+        latest: Snapshot<any>,
         mappedPaths?: Record<string, string[]>
     };
 
@@ -32,8 +32,8 @@ export interface CompletionBatch {
     completions: CommandCompletion[];
 }
 
-export interface Model {
-    getDocument(): object;
+export interface Model<T extends object> {
+    getDocument(): T;
     getUpdateCount(): number;
     performCommand(command: Command): Result;
 }
@@ -47,9 +47,9 @@ export interface HistoryStore {
     store(from: number, completions: CommandCompletion[]): Promise<void>;
 }
 
-export interface Snapshot {
+export interface Snapshot<T extends object> {
     updateCount: number;
-    document: object
+    document: T
 }
 
 export interface CompletionError {

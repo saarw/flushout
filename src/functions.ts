@@ -1,7 +1,7 @@
 import { Model, CommandCompletion, CompletionBatch, CompletionError } from "./types";
 import { PathMapper } from "./path-mapper";
 
-export function applyCompletions(model: Model, completions: CommandCompletion[], pathMapper: PathMapper): 
+export function applyCompletions(model: Model<any>, completions: CommandCompletion[], pathMapper: PathMapper): 
     undefined | { applied: CompletionBatch, errors?: CompletionError[] } {
     const startUpdate = model.getUpdateCount();
     let modifiedBatch = undefined;

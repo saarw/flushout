@@ -4,7 +4,7 @@ import { Master, CompletionBatch, CommandAction, HistoryStore, CommandCompletion
 
 describe('Master', () => {
     test('adding node returns ok', async () => {
-      const model =new Inner();
+      const model =new Inner({});
       const updater = new Master(model);
       const batch: CompletionBatch = {
         completions: [{
@@ -24,7 +24,7 @@ describe('Master', () => {
     });
   
     test('merge two add commands', () => {
-      const model = new Inner();
+      const model = new Inner({});
       const updater = new Master(model);
       const batch: CompletionBatch = {
         completions: [{
@@ -44,7 +44,7 @@ describe('Master', () => {
     });
   
     test('merge two add commands without history produces full sync', async () => {
-      const model = new Inner();
+      const model = new Inner({});
       const updater = new Master(model);
       const batch: CompletionBatch = {
         completions: [{
@@ -63,7 +63,7 @@ describe('Master', () => {
     });
   
     test('merge two add commands with history produces partial sync', async () => {
-      const model = new Inner();
+      const model = new Inner({});
       const historyStore: HistoryStore = createHistoryStore();
       const updater = new Master(model, historyStore);
       const batch: CompletionBatch = {

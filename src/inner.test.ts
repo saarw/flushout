@@ -4,7 +4,7 @@ import { CommandAction } from ".";
 
 describe('Inner', () => {
     test('add new node without initial values', () => {
-      const model = new Inner();
+      const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.New
       }) as any;
@@ -13,7 +13,7 @@ describe('Inner', () => {
     });
   
     test('add new node with initial values', () => {
-      const model = new Inner();
+      const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.New, 
         props: {p1: 'aValue'}
@@ -23,7 +23,7 @@ describe('Inner', () => {
     });
   
     test('add and update node', () => {
-      const model = new Inner();
+      const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.New
       }) as any;
@@ -40,7 +40,7 @@ describe('Inner', () => {
     });
   
     test('add and delete node', () => {
-      const model = new Inner();
+      const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.New
       }) as any;
@@ -53,7 +53,7 @@ describe('Inner', () => {
     });
   
     test('add branch and delete middle', () => {
-      const model = new Inner();
+      const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.New
       }) as any;

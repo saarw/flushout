@@ -1,13 +1,18 @@
 import { Model, Snapshot, Command, Result, CommandAction } from "./types";
-export class Inner implements Model {
-    private snapshot: Snapshot;
-    constructor(snapshot?: Snapshot) {
-        this.snapshot = snapshot ? snapshot : { updateCount: 0, document: {} };
+export class Inner<T extends object> implements Model<T> {
+    private snapshot: Snapshot<T>;
+    constructor(snapshotOrDocument: Snapshot<T> | T) {
+        if ((snapshotOrDocument as Snapshot<T>).updateCount != undefined &&
+            (snapshotOrDocument as Snapshot<T>).document != undefined) {
+            this.snapshot = snapshotOrDocument as Snapshot<T>;
+        } else {
+            this.snapshot = { updateCount: 0, document: snapshotOrDocument as T};
+        }
     }
     getUpdateCount(): number {
         return this.snapshot.updateCount;
     }
-    getDocument(): any {
+    getDocument(): T {
         return this.snapshot.document;
     }
     performCommand(command: Command): Result {

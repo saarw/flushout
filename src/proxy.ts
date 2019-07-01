@@ -3,19 +3,19 @@ import { PathMapper } from "./path-mapper";
 import { applyCompletions } from "./functions";
 import { Inner } from "./inner";
 
-export class Proxy implements Model {
+export class Proxy<T extends object> implements Model<T> {
     private lastCommittedDocument: string;
     private lastCommittedUpdateCount: number;
-    private model: Inner;
+    private model: Inner<T>;
     private uncommittedCompletions: CommandCompletion[];
     private nextCommittedDocument?: string;
     private nextCommittedUpdateCount?: number;
-    constructor(snapshot: Snapshot) {
+    constructor(snapshot: Snapshot<T>) {
         this.model = new Inner(snapshot);
         this.lastCommittedDocument = JSON.stringify(snapshot.document);
         this.lastCommittedUpdateCount = snapshot.updateCount;
     }
-    getDocument(): any {
+    getDocument(): T {
         return this.model.getDocument();
     }
     getUpdateCount(): number {

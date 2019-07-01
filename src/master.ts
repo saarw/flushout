@@ -2,11 +2,11 @@ import { PathMapper } from "./path-mapper";
 import { HistoryStore, Model, CompletionBatch, ApplyResult } from "./types";
 import { applyCompletions } from "./functions";
 
-export class Master {
+export class Master<T extends object> {
     readonly historyStore?: HistoryStore;
-    model: Model;
+    model: Model<T>;
 
-    constructor(model: Model, historyStore?: HistoryStore) {
+    constructor(model: Model<T>, historyStore?: HistoryStore) {
         this.model = model;
         this.historyStore = historyStore;
     }
