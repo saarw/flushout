@@ -1,15 +1,10 @@
-import {
-  CommandAction,
-  CommandCompletion,
-  CompletionBatch,
-  HistoryStore,
-  ModelImpl,
-  Origin
-  } from '.';
+import { CommandAction, CompletionBatch, CommandCompletion, HistoryStore } from './types';
+import { Master } from './master';
+import { Inner } from './inner';
 
-describe('ModelImpl', () => {
+describe('Inner', () => {
   test('add new node without initial values', () => {
-    const model = new ModelImpl();
+    const model = new Inner();
     const result = model.performCommand({
       action: CommandAction.New
     }) as any;
@@ -18,7 +13,7 @@ describe('ModelImpl', () => {
   });
 
   test('add new node with initial values', () => {
-    const model = new ModelImpl();
+    const model = new Inner();
     const result = model.performCommand({
       action: CommandAction.New, 
       props: {p1: 'aValue'}
@@ -28,7 +23,7 @@ describe('ModelImpl', () => {
   });
 
   test('add and update node', () => {
-    const model = new ModelImpl();
+    const model = new Inner();
     const result = model.performCommand({
       action: CommandAction.New
     }) as any;
@@ -45,7 +40,7 @@ describe('ModelImpl', () => {
   });
 
   test('add and delete node', () => {
-    const model = new ModelImpl();
+    const model = new Inner();
     const result = model.performCommand({
       action: CommandAction.New
     }) as any;
@@ -58,7 +53,7 @@ describe('ModelImpl', () => {
   });
 
   test('add branch and delete middle', () => {
-    const model = new ModelImpl();
+    const model = new Inner();
     const result = model.performCommand({
       action: CommandAction.New
     }) as any;
@@ -80,10 +75,10 @@ describe('ModelImpl', () => {
   });
 });
 
-describe('ModelUpdater', () => {
+describe('Master', () => {
   test('adding node returns ok', () => {
-    const model =new ModelImpl();
-    const updater = new Origin(model);
+    const model =new Inner();
+    const updater = new Master(model);
     const batch: CompletionBatch = {
       completions: [{
           command: {
@@ -102,8 +97,8 @@ describe('ModelUpdater', () => {
   });
 
   test('merge two add commands', () => {
-    const model = new ModelImpl();
-    const updater = new Origin(model);
+    const model = new Inner();
+    const updater = new Master(model);
     const batch: CompletionBatch = {
       completions: [{
           command: {
@@ -122,8 +117,8 @@ describe('ModelUpdater', () => {
   });
 
   test('merge two add commands without history produces full sync', () => {
-    const model = new ModelImpl();
-    const updater = new Origin(model);
+    const model = new Inner();
+    const updater = new Master(model);
     const batch: CompletionBatch = {
       completions: [{
           command: {
@@ -141,9 +136,9 @@ describe('ModelUpdater', () => {
   });
 
   test('merge two add commands with history produces partial sync', () => {
-    const model = new ModelImpl();
+    const model = new Inner();
     const historyStore: HistoryStore = createHistoryStore();
-    const updater = new Origin(model, historyStore);
+    const updater = new Master(model, historyStore);
     const batch: CompletionBatch = {
       completions: [{
           command: {

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Event-sourcing based data model that lets client-local copies synchronize with a remote source model.",
   "main": "index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
     "build": "tsc",

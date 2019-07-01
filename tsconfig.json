@@ -3,6 +3,7 @@
     "module": "commonjs",
     "esModuleInterop": true,
     "target": "es6",
+    "declaration": true,
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "dist"
