@@ -3,7 +3,7 @@ import { Inner } from "./inner";
 import { Master, CompletionBatch, CommandAction, HistoryStore, CommandCompletion } from ".";
 
 describe('Master', () => {
-    test('adding node returns ok', () => {
+    test('adding node returns ok', async () => {
       const model =new Inner();
       const updater = new Master(model);
       const batch: CompletionBatch = {
@@ -15,7 +15,7 @@ describe('Master', () => {
         }],
         from: 0
       };
-      const result = updater.apply(batch);
+      const result = await updater.apply(batch);
       
       expect(model.getUpdateCount()).toBe(1);
       expect(result.sync).toBeUndefined();
@@ -43,7 +43,7 @@ describe('Master', () => {
       expect(model.getDocument()['2']).toBeDefined();
     });
   
-    test('merge two add commands without history produces full sync', () => {
+    test('merge two add commands without history produces full sync', async () => {
       const model = new Inner();
       const updater = new Master(model);
       const batch: CompletionBatch = {
@@ -56,13 +56,13 @@ describe('Master', () => {
         from: 0
       };
       updater.apply(batch);
-      const result = updater.apply(batch);
+      const result = await updater.apply(batch);
       
       expect(result.sync).toBeDefined();
       expect(result.sync.isPartial).toBe(false);
     });
   
-    test('merge two add commands with history produces partial sync', () => {
+    test('merge two add commands with history produces partial sync', async () => {
       const model = new Inner();
       const historyStore: HistoryStore = createHistoryStore();
       const updater = new Master(model, historyStore);
@@ -76,7 +76,7 @@ describe('Master', () => {
         from: 0
       };
       updater.apply(batch);
-      const result = updater.apply(batch);
+      const result = await  updater.apply(batch);
       
       expect(result.sync).toBeDefined();
       expect(result.sync.isPartial).toBe(true);
@@ -88,13 +88,14 @@ describe('Master', () => {
   function createHistoryStore(): HistoryStore {
     return {
       history: [],
-      get(from: number, to: number): CommandCompletion[] {
-        return this.history.slice(from, to);
+      get(from: number, to: number): Promise<CommandCompletion[]> {
+        return Promise.resolve(this.history.slice(from, to));
       },
-      store(updateNum: number, command: CommandCompletion) {
-        if (this.history.length === updateNum) {
-          this.history.push(command);
+      store(from: number, completions: CommandCompletion[]): Promise<void> {
+        if (this.history.length === from) {
+            this.history = this.history.concat(completions);
         }
+        return Promise.resolve();
       }
     } as HistoryStore;
   }

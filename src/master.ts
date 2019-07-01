@@ -3,7 +3,7 @@ import { HistoryStore, Model, CompletionBatch, ApplyResult } from "./types";
 import { applyCompletions } from "./functions";
 
 export class Master {
-    historyStore?: HistoryStore;
+    readonly historyStore?: HistoryStore;
     model: Model;
 
     constructor(model: Model, historyStore?: HistoryStore) {
@@ -11,7 +11,7 @@ export class Master {
         this.historyStore = historyStore;
     }
 
-    apply(batch: CompletionBatch): ApplyResult {
+    async apply(batch: CompletionBatch): Promise<ApplyResult> {
         const startUpdate = this.model.getUpdateCount();
 
         const pathMapper = new PathMapper();
@@ -20,7 +20,7 @@ export class Master {
 
         let sync = undefined;
         if (batch.from != startUpdate) {
-            const historyDiff = this.historyStore ? this.historyStore.get(batch.from, startUpdate) : undefined;
+            const historyDiff = this.historyStore ? await this.historyStore.get(batch.from, startUpdate) : undefined;
             if (historyDiff == undefined || (historyDiff.length != startUpdate - batch.from)) {
                 sync = {
                     isPartial: false,
@@ -43,9 +43,7 @@ export class Master {
             }
         }
         if (this.historyStore) {
-            applied.completions.forEach((e, i: number) => {
-                this.historyStore.store(startUpdate + i, e);
-            });
+            this.historyStore.store(startUpdate, applied.completions);
         }
         return {
             sync: sync,

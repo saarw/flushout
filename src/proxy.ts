@@ -2,6 +2,7 @@ import { Model, Snapshot, Command, Result, CommandCompletion, CompletionBatch, S
 import { PathMapper } from "./path-mapper";
 import { applyCompletions } from "./functions";
 import { Inner } from "./inner";
+
 export class Proxy implements Model {
     private lastCommittedDocument: string;
     private lastCommittedUpdateCount: number;

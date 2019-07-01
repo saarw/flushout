@@ -40,11 +40,11 @@ export interface Model {
 
 
 export interface HistoryStore {
-    // Returns the history from the specified update number, if available, otherwise undefined
-    get(from: number, to: number): CommandCompletion[] | undefined;
+    // Returns the history from the specified update count, if available, otherwise undefined
+    get(from: number, to: number): Promise<CommandCompletion[] | undefined>;
 
-    // Stores the execution with its model udate number
-    store(update: number, command: CommandCompletion);
+    // Stores the completions from the specified update count
+    store(from: number, completions: CommandCompletion[]): Promise<void>;
 }
 
 export interface Snapshot {
