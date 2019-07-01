@@ -1,7 +1,7 @@
 {
   "name": "flushout",
   "version": "1.0.0",
-  "description": "Event-sourcing based data model that lets client-local copies synchronize with a remote source model.",
+  "description": "Event-sourcing based data model where clients update local proxy models that flush updates to a remote master model that reconciles all changes.",
   "main": "index.js",
   "types": "dist/index.d.ts",
   "scripts": {
