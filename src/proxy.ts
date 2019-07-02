@@ -3,6 +3,12 @@ import { PathMapper } from "./path-mapper";
 import { applyCompletions } from "./functions";
 import { Inner } from "./inner";
 
+export interface FlushResult {
+    // If IDs in the model may have changed
+    idsChanged: boolean;
+    error?: string;
+}
+
 export class Proxy<T extends object> implements Model<T> {
     private lastCommittedDocument: string;
     private lastCommittedUpdateCount: number;
@@ -47,9 +53,13 @@ export class Proxy<T extends object> implements Model<T> {
         this.uncommittedCompletions = [];
         return batch;
     }
-    endFlush(sync?: Sync<T>): string | undefined {
+    endFlush(sync?: Sync<T>): FlushResult {
+        let idsChanged = false;
         if (this.nextCommittedDocument == undefined) {
-            return 'No flush in progress';
+            return {
+                idsChanged: false,
+                error: 'No flush in progress'
+            };
         }
         if (!sync) {
             this.lastCommittedDocument = this.nextCommittedDocument;
@@ -61,11 +71,16 @@ export class Proxy<T extends object> implements Model<T> {
             if (sync.isPartial == true) {
                 const err = this.applyDiff(sync.diff);
                 if (err) {
-                    return err;
+                    return {
+                        idsChanged: true,
+                        error: err
+                    };
                 }
+                idsChanged = sync.mappedPaths != undefined;
             }
             else {
                 this.model = new Inner(sync.latest);
+                idsChanged = true;
             }
             this.lastCommittedDocument = JSON.stringify(this.model.getDocument());
             this.lastCommittedUpdateCount = this.model.getUpdateCount();
@@ -77,7 +92,9 @@ export class Proxy<T extends object> implements Model<T> {
             this.nextCommittedDocument = undefined;
             this.nextCommittedUpdateCount = undefined;
         }
-        return undefined;
+        return {
+            idsChanged: idsChanged
+        };
     }
     private applyDiff(diff: CompletionBatch): undefined | string {
         if (this.lastCommittedUpdateCount === diff.from) {
