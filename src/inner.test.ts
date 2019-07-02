@@ -3,7 +3,7 @@ import { Inner } from "./inner";
 import { CommandAction } from ".";
 
 describe('Inner', () => {
-    test('add new node without initial values', () => {
+    test('create without initial values', () => {
       const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.Create
@@ -12,7 +12,7 @@ describe('Inner', () => {
       expect(model.getDocument()[result.isSuccess && result.createdId]).toEqual({});
     });
   
-    test('add new node with initial values', () => {
+    test('create with initial values', () => {
       const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.Create, 
@@ -21,8 +21,29 @@ describe('Inner', () => {
       expect(model.getUpdateCount()).toBe(1);
       expect(model.getDocument()[result.isSuccess && result.createdId].p1).toBe('aValue');
     });
+
+    test('create without proposed ID', () => {
+        const model = new Inner({});
+        model.performCommand({
+            action: CommandAction.Create
+        }, 'myId');
+        expect(model.getUpdateCount()).toBe(1);
+        expect(model.getDocument()['myId']).toEqual({});
+    });
+
+    test('create changes proposed ID when already exists', () => {
+        const model = new Inner({
+            myId: {}
+        });
+        const result = model.performCommand({
+            action: CommandAction.Create
+        }, 'myId');
+        expect(model.getUpdateCount()).toBe(1);
+        expect(result.isSuccess && result.createdId).toBeTruthy();
+        expect(result.isSuccess && result.createdId).not.toBe('myId');
+    });
   
-    test('add and update node', () => {
+    test('create and update', () => {
       const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.Create
@@ -39,7 +60,7 @@ describe('Inner', () => {
       expect(model.getDocument()[result.isSuccess && result.createdId].p1).toBe('aValue');
     });
   
-    test('add and delete node', () => {
+    test('create and delete', () => {
       const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.Create
@@ -52,7 +73,7 @@ describe('Inner', () => {
       expect(model.getDocument()[result.isSuccess && result.createdId]).toBe(undefined);
     });
   
-    test('add branch and delete middle', () => {
+    test('create branch and delete middle', () => {
       const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.Create
