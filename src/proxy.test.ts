@@ -30,7 +30,7 @@ describe('Proxy', () => {
         expect(batch.from).toBe(23);
         expect(batch.completions.length).toBe(1);
         expect(batch.completions[0].command.action).toBe(CommandAction.Create);
-        expect(typeof batch.completions[0].newId).toBe('string');
+        expect(typeof batch.completions[0].createdId).toBe('string');
     });
 
     test('performCommand adds multiple flush completions in correct order', async () => {
@@ -43,7 +43,7 @@ describe('Proxy', () => {
           action: CommandAction.Create
         });
         proxy.performCommand({
-            path: [result.isSuccess && result.newId],
+            path: [result.isSuccess && result.createdId],
             action: CommandAction.Update
         });
         
@@ -101,7 +101,7 @@ describe('Proxy', () => {
         
         proxy.beginFlush();
         proxy.performCommand({
-            path: [result.isSuccess && result.newId],
+            path: [result.isSuccess && result.createdId],
             action: CommandAction.Update
         });
 
@@ -148,7 +148,7 @@ describe('Proxy', () => {
         
         proxy.beginFlush();
 
-        proxy.performCommand({
+        const result = proxy.performCommand({
             action: CommandAction.Create
           });
         proxy.endFlush({
@@ -159,6 +159,6 @@ describe('Proxy', () => {
             }
         });
         expect(proxy.getUpdateCount()).toBe(56);
-        expect(proxy.getDocument()['56']).toEqual({});
+        expect(proxy.getDocument()[result.isSuccess && result.createdId]).toEqual({});
     });
 });

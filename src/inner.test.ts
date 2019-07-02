@@ -7,9 +7,9 @@ describe('Inner', () => {
       const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.Create
-      }) as any;
+      });
       expect(model.getUpdateCount()).toBe(1);
-      expect(model.getDocument()[result.newId]).toEqual({});
+      expect(model.getDocument()[result.isSuccess && result.createdId]).toEqual({});
     });
   
     test('add new node with initial values', () => {
@@ -17,60 +17,60 @@ describe('Inner', () => {
       const result = model.performCommand({
         action: CommandAction.Create, 
         props: {p1: 'aValue'}
-      }) as any;
+      });
       expect(model.getUpdateCount()).toBe(1);
-      expect(model.getDocument()[result.newId].p1).toBe('aValue');
+      expect(model.getDocument()[result.isSuccess && result.createdId].p1).toBe('aValue');
     });
   
     test('add and update node', () => {
       const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.Create
-      }) as any;
+      });
       const result2 = model.performCommand({
         action: CommandAction.Update,
-        path: [result.newId],
+        path: [result.isSuccess && result.createdId],
         props: {
           p1: 'aValue'
         }
-      }) as any;
+      });
   
       expect(model.getUpdateCount()).toBe(2);
-      expect(model.getDocument()[result.newId].p1).toBe('aValue');
+      expect(model.getDocument()[result.isSuccess && result.createdId].p1).toBe('aValue');
     });
   
     test('add and delete node', () => {
       const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.Create
-      }) as any;
+      });
       const result2 = model.performCommand({
         action: CommandAction.Delete,
-        path: result.newId
-      }) as any;
+        path: [result.isSuccess && result.createdId]
+      });
       expect(model.getUpdateCount()).toBe(2);
-      expect(model.getDocument()[result.newId]).toBe(undefined);
+      expect(model.getDocument()[result.isSuccess && result.createdId]).toBe(undefined);
     });
   
     test('add branch and delete middle', () => {
       const model = new Inner({});
       const result = model.performCommand({
         action: CommandAction.Create
-      }) as any;
+      });
       const result2 = model.performCommand({
         action: CommandAction.Create,
-        path: [result.newId]
-      }) as any;
+        path: [result.isSuccess && result.createdId]
+      });
       const result3 = model.performCommand({
         action: CommandAction.Create,
-        path: [result.newId, result2.newId]
-      }) as any;
+        path: [result.isSuccess && result.createdId, result2.isSuccess && result2.createdId]
+      });
       const result4 = model.performCommand({
         action: CommandAction.Delete,
-        path: [result.newId, result2.newId]
-      }) as any;
+        path: [result.isSuccess && result.createdId, result2.isSuccess && result2.createdId]
+      });
       expect(model.getUpdateCount()).toBe(4);
-      expect(model.getDocument()[result.newId][result2.newId]).toBe(undefined);
-      expect(model.getDocument()[result.newId]).toEqual({});
+      expect(model.getDocument()[result.isSuccess && result.createdId][result2.isSuccess && result2.createdId]).toBe(undefined);
+      expect(model.getDocument()[result.isSuccess && result.createdId]).toEqual({});
     });
   });

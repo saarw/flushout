@@ -11,7 +11,7 @@ describe('Master', () => {
             command: {
               action: CommandAction.Create
             },
-            newId: '1'
+            createdId: '1'
         }],
         from: 0
       };
@@ -31,7 +31,7 @@ describe('Master', () => {
             command: {
               action: CommandAction.Create
             },
-            newId: '1'
+            createdId: '1'
         }],
         from: 0
       };
@@ -40,7 +40,7 @@ describe('Master', () => {
       
       expect(model.getUpdateCount()).toBe(2);
       expect(model.getDocument()['1']).toBeDefined();
-      expect(model.getDocument()['2']).toBeDefined();
+      expect(model.getDocument()['3']).toBeDefined();
     });
   
     test('merge two add commands without history produces full sync', async () => {
@@ -51,7 +51,7 @@ describe('Master', () => {
             command: {
               action: CommandAction.Create
             },
-            newId: '1'
+            createdId: '1'
         }],
         from: 0
       };
@@ -71,7 +71,7 @@ describe('Master', () => {
             command: {
               action: CommandAction.Create
             },
-            newId: '1'
+            createdId: '1'
         }],
         from: 0
       };

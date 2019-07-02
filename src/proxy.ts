@@ -32,7 +32,7 @@ export class Proxy<T extends object> implements Model<T> {
         const result = this.model.performCommand(command);
         if (result.isSuccess == true) {
             // Only store successfully applied commands in delegates
-            this.uncommittedCompletions.push({ command: command, newId: result.newId });
+            this.uncommittedCompletions.push({ command: command, createdId: result.createdId });
         } else {
             // If there's a risk that the failed command modified the model, we would want to
             // rebuild it from our last committed snapshot and uncommitted commands, but we

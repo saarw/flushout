@@ -1,4 +1,4 @@
-export type Result = {isSuccess: true, newId?: string} | {isSuccess: false, error: string};
+export type Result = {isSuccess: true, createdId?: string} | {isSuccess: false, error: string};
 
 export type Sync<T extends object> = { 
         isPartial: true, 
@@ -24,7 +24,7 @@ export interface Command {
 
 export interface CommandCompletion {
     command: Command;
-    newId?: string;
+    createdId?: string;
 }
 
 export interface CompletionBatch {
@@ -35,7 +35,7 @@ export interface CompletionBatch {
 export interface Model<T extends object> {
     getDocument(): T;
     getUpdateCount(): number;
-    performCommand(command: Command): Result;
+    performCommand(command: Command, proposeCreateId?: string): Result;
 }
 
 

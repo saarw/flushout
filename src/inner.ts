@@ -15,19 +15,26 @@ export class Inner<T extends object> implements Model<T> {
     getDocument(): T {
         return this.snapshot.document;
     }
-    performCommand(command: Command): Result {
+    performCommand(command: Command, proposeCreateId?: string): Result {
         const path = command.path || [];
         switch (command.action) {
             case CommandAction.Create: {
                 const result = this.navigateToNode(path);
                 if (result.found == true) {
                     const node = result.node;
-                    const newId = (this.snapshot.updateCount + 1).toString();
+                    let attempt = 0;
+                    let newId;
+                    do {
+                        newId = proposeCreateId != undefined && attempt == 0 ? 
+                            proposeCreateId : 
+                            this.generateNewId(attempt);
+                        attempt += 1;
+                    } while(newId in node);
                     node[newId] = command.props != undefined ? command.props : {};
                     this.snapshot.updateCount += 1;
                     return {
                         isSuccess: true,
-                        newId: newId
+                        createdId: newId
                     };
                 }
                 return {
@@ -86,5 +93,9 @@ export class Inner<T extends object> implements Model<T> {
             }
         }
         return { found: true, node: n };
+    }
+
+    generateNewId(attempt: number): string {
+        return (this.snapshot.updateCount + 1 + attempt).toString();
     }
 }
