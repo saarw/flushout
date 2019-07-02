@@ -11,7 +11,7 @@ export class Master<T extends object> {
         this.historyStore = historyStore;
     }
 
-    async apply(batch: CompletionBatch): Promise<ApplyResult> {
+    async apply(batch: CompletionBatch): Promise<ApplyResult<T>> {
         const startUpdate = this.model.getUpdateCount();
 
         const pathMapper = new PathMapper();

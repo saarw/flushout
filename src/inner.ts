@@ -18,7 +18,7 @@ export class Inner<T extends object> implements Model<T> {
     performCommand(command: Command): Result {
         const path = command.path || [];
         switch (command.action) {
-            case CommandAction.New: {
+            case CommandAction.Create: {
                 const result = this.navigateToNode(path);
                 if (result.found == true) {
                     const node = result.node;
@@ -38,7 +38,8 @@ export class Inner<T extends object> implements Model<T> {
             case CommandAction.Update: {
                 const result = this.navigateToNode(path);
                 if (result.found == true) {
-                    Object.keys(command.props).forEach(key => {
+                    const propKeys = command.props != undefined ? Object.keys(command.props) : [];
+                    propKeys.forEach(key => {
                         result.node[key] = command.props[key];
                     });
                     this.snapshot.updateCount += 1;

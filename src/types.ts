@@ -1,18 +1,18 @@
 export type Result = {isSuccess: true, newId?: string} | {isSuccess: false, error: string};
 
-export type Sync = { 
+export type Sync<T extends object> = { 
         isPartial: true, 
         diff: CompletionBatch,
         mappedPaths?: Record<string, string[]>
     } | 
     { 
         isPartial: false,
-        latest: Snapshot<any>,
+        latest: Snapshot<T>,
         mappedPaths?: Record<string, string[]>
     };
 
 export enum CommandAction {
-    New = 'new',
+    Create = 'create',
     Update = 'update',
     Delete = 'detete'
 }
@@ -57,7 +57,7 @@ export interface CompletionError {
     path: string[],
     errorMessage: string
 }
-export interface ApplyResult {
-    sync?: Sync;
+export interface ApplyResult<T extends object> {
+    sync?: Sync<T>;
     errors?: CompletionError[]
 }

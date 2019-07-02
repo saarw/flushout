@@ -3,13 +3,13 @@ import { Inner } from "./inner";
 import { Master, CompletionBatch, CommandAction, HistoryStore, CommandCompletion } from ".";
 
 describe('Master', () => {
-    test('adding node returns ok', async () => {
+    test('apply batch with command to create', async () => {
       const model =new Inner({});
       const updater = new Master(model);
       const batch: CompletionBatch = {
         completions: [{
             command: {
-              action: CommandAction.New
+              action: CommandAction.Create
             },
             newId: '1'
         }],
@@ -23,13 +23,13 @@ describe('Master', () => {
       expect(model.getDocument()['1']).toBeDefined();
     });
   
-    test('merge two add commands', () => {
+    test('apply two batches that both perform the same create', () => {
       const model = new Inner({});
       const updater = new Master(model);
       const batch: CompletionBatch = {
         completions: [{
             command: {
-              action: CommandAction.New
+              action: CommandAction.Create
             },
             newId: '1'
         }],
@@ -49,7 +49,7 @@ describe('Master', () => {
       const batch: CompletionBatch = {
         completions: [{
             command: {
-              action: CommandAction.New
+              action: CommandAction.Create
             },
             newId: '1'
         }],
@@ -69,7 +69,7 @@ describe('Master', () => {
       const batch: CompletionBatch = {
         completions: [{
             command: {
-              action: CommandAction.New
+              action: CommandAction.Create
             },
             newId: '1'
         }],

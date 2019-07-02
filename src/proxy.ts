@@ -27,6 +27,10 @@ export class Proxy<T extends object> implements Model<T> {
         if (result.isSuccess == true) {
             // Only store successfully applied commands in delegates
             this.uncommittedCompletions.push({ command: command, newId: result.newId });
+        } else {
+            // If there's a risk that the failed command modified the model, we would want to
+            // rebuild it from our last committed snapshot and uncommitted commands, but we
+            // don't yet have commands that can fail in that way
         }
         return result;
     }
@@ -43,7 +47,7 @@ export class Proxy<T extends object> implements Model<T> {
         this.uncommittedCompletions = [];
         return batch;
     }
-    endFlush(sync?: Sync): string | undefined {
+    endFlush(sync?: Sync<T>): string | undefined {
         if (this.nextCommittedDocument == undefined) {
             return 'No flush in progress';
         }

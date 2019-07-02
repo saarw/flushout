@@ -6,7 +6,7 @@ describe('Inner', () => {
     test('add new node without initial values', () => {
       const model = new Inner({});
       const result = model.performCommand({
-        action: CommandAction.New
+        action: CommandAction.Create
       }) as any;
       expect(model.getUpdateCount()).toBe(1);
       expect(model.getDocument()[result.newId]).toEqual({});
@@ -15,7 +15,7 @@ describe('Inner', () => {
     test('add new node with initial values', () => {
       const model = new Inner({});
       const result = model.performCommand({
-        action: CommandAction.New, 
+        action: CommandAction.Create, 
         props: {p1: 'aValue'}
       }) as any;
       expect(model.getUpdateCount()).toBe(1);
@@ -25,7 +25,7 @@ describe('Inner', () => {
     test('add and update node', () => {
       const model = new Inner({});
       const result = model.performCommand({
-        action: CommandAction.New
+        action: CommandAction.Create
       }) as any;
       const result2 = model.performCommand({
         action: CommandAction.Update,
@@ -42,7 +42,7 @@ describe('Inner', () => {
     test('add and delete node', () => {
       const model = new Inner({});
       const result = model.performCommand({
-        action: CommandAction.New
+        action: CommandAction.Create
       }) as any;
       const result2 = model.performCommand({
         action: CommandAction.Delete,
@@ -55,14 +55,14 @@ describe('Inner', () => {
     test('add branch and delete middle', () => {
       const model = new Inner({});
       const result = model.performCommand({
-        action: CommandAction.New
+        action: CommandAction.Create
       }) as any;
       const result2 = model.performCommand({
-        action: CommandAction.New,
+        action: CommandAction.Create,
         path: [result.newId]
       }) as any;
       const result3 = model.performCommand({
-        action: CommandAction.New,
+        action: CommandAction.Create,
         path: [result.newId, result2.newId]
       }) as any;
       const result4 = model.performCommand({
