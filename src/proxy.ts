@@ -98,7 +98,10 @@ export class Proxy<T extends object> implements Model<T> {
     }
     private applyDiff(diff: CompletionBatch): undefined | string {
         if (this.lastCommittedUpdateCount === diff.from) {
-            this.model = JSON.parse(this.lastCommittedDocument);
+            this.model = new Inner({
+                updateCount: this.lastCommittedUpdateCount,
+                document: JSON.parse(this.lastCommittedDocument)
+            });
             const diffApplied = applyCompletions(this.model, diff.completions, new PathMapper());
             if (diffApplied && diffApplied.errors) {
                 return 'Errors when applying diff on previous model';

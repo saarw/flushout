@@ -161,4 +161,30 @@ describe('Proxy', () => {
         expect(proxy.getUpdateCount()).toBe(56);
         expect(proxy.getDocument()[result.isSuccess && result.createdId]).toEqual({});
     });
+
+    test('endFlush with partial sync updates model', async () => {
+        const snapshot = {
+          updateCount: 23,
+          document: {}
+        };
+        const proxy = new Proxy(snapshot);
+        proxy.beginFlush();
+
+        proxy.endFlush({
+            isPartial: true,
+            diff: {
+                from: 23,
+                completions: [
+                    {
+                        command: {
+                            action: CommandAction.Create
+                        },
+                        createdId: '5345'
+                    }
+                ]
+            }
+        });
+        expect(proxy.getUpdateCount()).toBe(24);
+        expect(proxy.getDocument()['5345']).toEqual({});
+    });
 });
