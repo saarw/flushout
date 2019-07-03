@@ -35,7 +35,7 @@ export interface CompletionBatch {
 export interface Model<T extends object> {
     getDocument(): T;
     getUpdateCount(): number;
-    performCommand(command: Command, proposeCreateId?: string): Result;
+    apply(command: Command, proposeCreateId?: string): Result;
 }
 
 

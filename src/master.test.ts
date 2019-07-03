@@ -4,7 +4,7 @@ import { Master, CompletionBatch, CommandAction, HistoryStore, CommandCompletion
 
 describe('Master', () => {
     test('apply batch with command to create', async () => {
-      const master = new Master({ updateCount: 0, document: {} });
+      const master = new Master<any>({ updateCount: 0, document: {} });
       const batch: CompletionBatch = {
         completions: [{
             command: {
@@ -23,7 +23,7 @@ describe('Master', () => {
     });
   
     test('apply two batches that both perform the same create', () => {
-      const master = new Master({ updateCount: 0, document: {} }, { sequentialIds: true });
+      const master = new Master<any>({ updateCount: 0, document: {} }, { sequentialIds: true });
       const batch: CompletionBatch = {
         completions: [{
             command: {
@@ -55,7 +55,10 @@ describe('Master', () => {
       master.apply(batch);
       const result = await master.apply(batch);
       
-      expect(result.sync).toBeDefined();
+      if (result.sync == undefined) {
+          fail();
+          return;
+      }
       expect(result.sync.isPartial).toBe(false);
     });
   
@@ -74,14 +77,18 @@ describe('Master', () => {
       master.apply(batch);
       const result = await  master.apply(batch);
       
-      expect(result.sync).toBeDefined();
+      if (result.sync == undefined) {
+        fail();
+        return;
+      }
       expect(result.sync.isPartial).toBe(true);
       expect(result.sync.isPartial && result.sync.diff.from).toBe(0);
       expect(result.sync.isPartial && result.sync.diff.completions.length).toBe(2);
     });
   });
   
-  function createHistoryStore(): HistoryStore {
+
+export function createHistoryStore(): HistoryStore & any {
     return {
       history: [],
       get(from: number, to: number): Promise<CommandCompletion[]> {
@@ -93,5 +100,5 @@ describe('Master', () => {
         }
         return Promise.resolve();
       }
-    } as HistoryStore;
-  }
+    };
+}

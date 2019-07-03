@@ -9,10 +9,14 @@ export interface FlushResult {
     error?: string;
 }
 
-export interface ProxyOptions {
+export interface ProxyConfig {
     sequentialIds: boolean
 }
 
+/**
+ * A proxy with a local copy of a data model that supports flushing changes to the master
+ * in beginFlush-endFlush cycles.
+ */
 export class Proxy<T extends object> implements Model<T> {
     private lastCommittedDocument: string;
     private lastCommittedUpdateCount: number;
@@ -20,8 +24,14 @@ export class Proxy<T extends object> implements Model<T> {
     private uncommittedCompletions: CommandCompletion[];
     private nextCommittedDocument?: string;
     private nextCommittedUpdateCount?: number;
-    constructor(snapshot: Snapshot<T>, private options?: ProxyOptions) {
-        this.model = new Inner(snapshot, options ? options.sequentialIds : false);
+
+    /**
+     * Instantiated with the latest snapshot from the master.
+     * @param snapshot Snapshot to begin building the proxy model on.
+     * @param config Optional configuration options.
+     */
+    constructor(snapshot: Snapshot<T>, private config?: ProxyConfig) {
+        this.model = new Inner(snapshot, config ? config.sequentialIds : false);
         this.uncommittedCompletions = [];
         this.lastCommittedDocument = JSON.stringify(snapshot.document);
         this.lastCommittedUpdateCount = snapshot.updateCount;
@@ -32,8 +42,8 @@ export class Proxy<T extends object> implements Model<T> {
     getUpdateCount(): number {
         return this.model.getUpdateCount();
     }
-    performCommand(command: Command): Result {
-        const result = this.model.performCommand(command);
+    apply(command: Command): Result {
+        const result = this.model.apply(command);
         if (result.isSuccess == true) {
             // Only store successfully applied commands in delegates
             this.uncommittedCompletions.push({ command: command, createdId: result.createdId });
@@ -44,6 +54,11 @@ export class Proxy<T extends object> implements Model<T> {
         }
         return result;
     }
+    /**
+     * Returns a batch of currently uncommited changes and prepares the proxy for accepting
+     * more changes that get sent in the next flush. The flush must be ended with endFlush
+     * or cancelFlush before the next flush can begin.
+     */
     beginFlush(): CompletionBatch {
         if (this.nextCommittedDocument != undefined) {
             throw Error('Flush already in progress');
@@ -57,9 +72,26 @@ export class Proxy<T extends object> implements Model<T> {
         this.uncommittedCompletions = [];
         return batch;
     }
+    /**
+     * Cancels the current flush and puts the changes back at the start of the uncommitted queue
+     * to be sent in the next flush. Can be used if the flush fails to communicate with the master.
+     * @param flush The started the flush.
+     */
+    cancelFlush(flush: CompletionBatch) {
+        this.uncommittedCompletions = flush.completions.concat(this.uncommittedCompletions);
+        this.nextCommittedDocument = undefined;
+        this.nextCommittedUpdateCount = undefined;
+    }
+    /**
+     * Ends an ongoing flush with the result of how the flushed changes were reconciled
+     * at the Master. 
+     * @param sync Undefined if the changes were integrated as-is in the master, or a Sync 
+     * that specifies how to update the proxy to latest stage of the Master.
+     * 
+     */
     endFlush(sync?: Sync<T>): FlushResult {
         let idsChanged = false;
-        if (this.nextCommittedDocument == undefined) {
+        if (this.nextCommittedDocument == undefined || this.nextCommittedUpdateCount == undefined) {
             return {
                 idsChanged: false,
                 error: 'No flush in progress'
@@ -82,7 +114,7 @@ export class Proxy<T extends object> implements Model<T> {
                 idsChanged = sync.mappedPaths != undefined;
             }
             else {
-                this.model = new Inner(sync.latest, this.options ? this.options.sequentialIds : false);
+                this.model = new Inner(sync.latest, this.config ? this.config.sequentialIds : false);
                 idsChanged = true;
             }
             this.lastCommittedDocument = JSON.stringify(this.model.getDocument());
@@ -105,7 +137,7 @@ export class Proxy<T extends object> implements Model<T> {
             this.model = new Inner({
                 updateCount: this.lastCommittedUpdateCount,
                 document: JSON.parse(this.lastCommittedDocument)
-            }, this.options ? this.options.sequentialIds : false);
+            }, this.config ? this.config.sequentialIds : false);
             const diffApplied = applyCompletions(this.model, diff.completions, new PathMapper());
             if (diffApplied && diffApplied.errors) {
                 return 'Errors when applying diff on previous model';

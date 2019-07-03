@@ -7,8 +7,8 @@ describe('Proxy', () => {
         updateCount: 0,
         document: {}
       };
-      const proxy = new Proxy(snapshot, { sequentialIds: true });
-      proxy.performCommand({
+      const proxy = new Proxy<any>(snapshot, { sequentialIds: true });
+      proxy.apply({
         action: CommandAction.Create
       });
       
@@ -22,7 +22,7 @@ describe('Proxy', () => {
           document: {}
         };
         const proxy = new Proxy(snapshot);
-        proxy.performCommand({
+        proxy.apply({
           action: CommandAction.Create
         });
         
@@ -39,11 +39,15 @@ describe('Proxy', () => {
           document: {}
         };
         const proxy = new Proxy(snapshot);
-        const result = proxy.performCommand({
+        const result = proxy.apply({
           action: CommandAction.Create
         });
-        proxy.performCommand({
-            path: [result.isSuccess && result.createdId],
+        if (result.isSuccess == false) {
+            fail();
+            return;
+        }
+        proxy.apply({
+            path: [result.createdId!],
             action: CommandAction.Update
         });
         
@@ -61,7 +65,7 @@ describe('Proxy', () => {
           document: {}
         };
         const proxy = new Proxy(snapshot);
-        const result = proxy.performCommand({
+        const result = proxy.apply({
           action: CommandAction.Update,
           path: ['does_not_exist'],
           props: {
@@ -95,13 +99,17 @@ describe('Proxy', () => {
           document: {}
         };
         const proxy = new Proxy(snapshot);
-        const result = proxy.performCommand({
+        const result = proxy.apply({
           action: CommandAction.Create
         });
         
         proxy.beginFlush();
-        proxy.performCommand({
-            path: [result.isSuccess && result.createdId],
+        if (result.isSuccess == false) {
+            fail();
+            return;
+        }
+        proxy.apply({
+            path: [result.createdId!],
             action: CommandAction.Update
         });
 
@@ -119,7 +127,7 @@ describe('Proxy', () => {
           document: {}
         };
         const proxy = new Proxy(snapshot);
-        const result = proxy.performCommand({
+        const result = proxy.apply({
           action: CommandAction.Create
         });
         
@@ -141,14 +149,14 @@ describe('Proxy', () => {
           updateCount: 23,
           document: {}
         };
-        const proxy = new Proxy(snapshot);
-        proxy.performCommand({
+        const proxy = new Proxy<any>(snapshot);
+        proxy.apply({
           action: CommandAction.Create
         });
         
         proxy.beginFlush();
 
-        const result = proxy.performCommand({
+        const result = proxy.apply({
             action: CommandAction.Create
           });
         proxy.endFlush({
@@ -159,7 +167,11 @@ describe('Proxy', () => {
             }
         });
         expect(proxy.getUpdateCount()).toBe(56);
-        expect(proxy.getDocument()[result.isSuccess && result.createdId]).toEqual({});
+        if (result.isSuccess == false) {
+            fail();
+            return;
+        }
+        expect(proxy.getDocument()[result.createdId!]).toEqual({});
     });
 
     test('endFlush with partial sync updates model', async () => {
@@ -167,7 +179,7 @@ describe('Proxy', () => {
           updateCount: 23,
           document: {}
         };
-        const proxy = new Proxy(snapshot);
+        const proxy = new Proxy<any>(snapshot);
         proxy.beginFlush();
 
         proxy.endFlush({
@@ -193,10 +205,10 @@ describe('Proxy', () => {
           updateCount: 23,
           document: {}
         };
-        const proxy = new Proxy(snapshot);
+        const proxy = new Proxy<any>(snapshot);
         proxy.beginFlush();
 
-        const result = proxy.performCommand({
+        const result = proxy.apply({
             action: CommandAction.Create
           });
 
@@ -216,7 +228,11 @@ describe('Proxy', () => {
         });
         expect(flushResult.idsChanged).toBe(false);
         expect(proxy.getUpdateCount()).toBe(25);
-        expect(proxy.getDocument()[result.isSuccess && result.createdId]).toEqual({});
+        if (result.isSuccess == false) {
+            fail();
+            return;
+        }
+        expect(proxy.getDocument()[result.createdId!]).toEqual({});
     });
 
     test('endFlush with partial sync remaps existing uncommitted paths', async () => {
@@ -224,13 +240,17 @@ describe('Proxy', () => {
           updateCount: 23,
           document: {}
         };
-        const proxy = new Proxy(snapshot);
+        const proxy = new Proxy<any>(snapshot);
         proxy.beginFlush();
 
-        const result = proxy.performCommand({
+        const result = proxy.apply({
             action: CommandAction.Create
           });
 
+        if (result.isSuccess == false) {
+            fail();
+            return;
+        }
         const flushResult = proxy.endFlush({
             isPartial: true,
             diff: {
@@ -243,13 +263,13 @@ describe('Proxy', () => {
                                 syncCreated: true
                             }
                         },
-                        createdId: result.isSuccess && result.createdId
+                        createdId: result.createdId
                     }
                 ]
             }
         });
         expect(flushResult.idsChanged).toBe(true);
         expect(proxy.getUpdateCount()).toBe(25);
-        expect(proxy.getDocument()[result.isSuccess && result.createdId]).toEqual({ syncCreated: true });
+        expect(proxy.getDocument()[result.createdId!]).toEqual({ syncCreated: true });
     });
 });

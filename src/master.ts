@@ -3,7 +3,7 @@ import { HistoryStore, Model, CompletionBatch, ApplyResult, Snapshot, Sync } fro
 import { applyCompletions } from "./functions";
 import { Inner } from "./inner";
 
-export interface MasterOptions {
+export interface MasterConfig {
     historyStore?: HistoryStore,
     sequentialIds?: boolean         // used for testing
 }
@@ -12,9 +12,9 @@ export class Master<T extends object> {
     private readonly historyStore?: HistoryStore;
     private readonly model: Model<T>;
 
-    constructor(snapshot: Snapshot<T>, options?: MasterOptions) {
-        this.model = new Inner(snapshot, options ? options.sequentialIds : false);
-        this.historyStore = options ? options.historyStore : undefined;
+    constructor(snapshot: Snapshot<T>, config?: MasterConfig) {
+        this.model = new Inner(snapshot, config ? !!config.sequentialIds : false);
+        this.historyStore = config ? config.historyStore : undefined;
     }
 
     getSnapshot(): Snapshot<T> {
@@ -31,7 +31,7 @@ export class Master<T extends object> {
         const result = applyCompletions(this.model, batch.completions, pathMapper);
         const applied = result == undefined ? batch : result.applied;
 
-        let sync: Sync<T>;;
+        let sync: Sync<T> | undefined = undefined;
         if (batch.from != startUpdate) {
             const historyDiff = this.historyStore ? await this.historyStore.get(batch.from, startUpdate) : undefined;
             if (historyDiff == undefined || (historyDiff.length != startUpdate - batch.from)) {

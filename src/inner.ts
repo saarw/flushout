@@ -15,7 +15,7 @@ export class Inner<T extends object> implements Model<T> {
     getDocument(): T {
         return this.snapshot.document;
     }
-    performCommand(command: Command, proposeCreateId?: string): Result {
+    apply(command: Command, proposeCreateId?: string): Result {
         const path = command.path || [];
         switch (command.action) {
             case CommandAction.Create: {
@@ -30,7 +30,7 @@ export class Inner<T extends object> implements Model<T> {
                             this.generateNewId(attempt);
                         attempt += 1;
                     } while(newId in node);
-                    node[newId] = command.props != undefined ? command.props : {};
+                    node[newId] = command.props != undefined ? JSON.parse(JSON.stringify(command.props)) : {};
                     this.snapshot.updateCount += 1;
                     return {
                         isSuccess: true,
@@ -46,9 +46,12 @@ export class Inner<T extends object> implements Model<T> {
                 const result = this.navigateToNode(path);
                 if (result.found == true) {
                     const propKeys = command.props != undefined ? Object.keys(command.props) : [];
-                    propKeys.forEach(key => {
-                        result.node[key] = command.props[key];
-                    });
+                    if (propKeys.length > 0) {
+                        const copy = JSON.parse(JSON.stringify(command.props));
+                        propKeys.forEach(key => {
+                            result.node[key] = copy[key];
+                        });
+                    }
                     this.snapshot.updateCount += 1;
                     return {
                         isSuccess: true
