@@ -1,22 +1,31 @@
-import { CommandAction } from './types';
-import { createHistoryStore } from './master.test';
-import { Master, HistoryProvider } from './master';
-import { Proxy } from './proxy';
+import { CommandAction } from "./types";
+import { createHistoryStore } from "./master.test";
+import { Master, HistoryProvider } from "./master";
+import { Proxy } from "./proxy";
 
-describe('Integration', () => {
-  test('multiple proxies create tree with same root ID, without history store', async () => {
-    const proxyA = new Proxy({
-      updateCount: 0,
-      document: {}
-    }, {sequentialIds: true});
-    const proxyB = new Proxy({
-      updateCount: 0,
-      document: {}
-    }, {sequentialIds: true});
-    const master = new Master({
-      updateCount: 0,
-      document: {}
-    }, {sequentialIds: true});
+describe("Integration", () => {
+  test("multiple proxies create tree with same root ID, without history store", async () => {
+    const proxyA = new Proxy(
+      {
+        updateCount: 0,
+        document: {}
+      },
+      { sequentialIds: true }
+    );
+    const proxyB = new Proxy(
+      {
+        updateCount: 0,
+        document: {}
+      },
+      { sequentialIds: true }
+    );
+    const master = new Master(
+      {
+        updateCount: 0,
+        document: {}
+      },
+      { sequentialIds: true }
+    );
 
     const resultA = proxyA.apply({
       action: CommandAction.Create,
@@ -29,10 +38,10 @@ describe('Integration', () => {
       return;
     }
     proxyA.apply({
-      path: [resultA.createdId!, 'branchA'],
+      path: [resultA.createdId!, "branchA"],
       action: CommandAction.Create,
       props: {
-        childOf: 'a'
+        childOf: "a"
       }
     });
     const batchA1 = proxyA.beginFlush();
@@ -49,14 +58,16 @@ describe('Integration', () => {
     }
     const batchB1 = proxyB.beginFlush();
     proxyB.apply({
-      path: [resultB.createdId!, 'branchB'],
+      path: [resultB.createdId!, "branchB"],
       action: CommandAction.Create,
       props: {
-        childOf: 'b'
+        childOf: "b"
       }
     });
 
-    expect(resultA.isSuccess && resultA.createdId).toBe(resultB.isSuccess && resultB.createdId);
+    expect(resultA.isSuccess && resultA.createdId).toBe(
+      resultB.isSuccess && resultB.createdId
+    );
 
     const applyResA1 = await master.apply(batchA1);
     const applyResB1 = await master.apply(batchB1);
@@ -73,7 +84,7 @@ describe('Integration', () => {
     const applyResB2 = await master.apply(batchB2);
 
     const applyResA2 = await master.apply(batchA2);
-    
+
     proxyA.endFlush(applyResA2.sync);
     proxyB.endFlush(applyResB2.sync);
 
@@ -82,20 +93,29 @@ describe('Integration', () => {
     expect(proxyA.getDocument()).toStrictEqual(proxyB.getDocument());
   });
 
-  test('multiple proxies create tree with same root ID, with history store', async () => {
+  test("multiple proxies create tree with same root ID, with history store", async () => {
     const historyStore: HistoryProvider & any = createHistoryStore();
-    const proxyA = new Proxy({
-      updateCount: 0,
-      document: {}
-    }, {sequentialIds: true});
-    const proxyB = new Proxy({
-      updateCount: 0,
-      document: {}
-    }, {sequentialIds: true});
-    const master = new Master({
-      updateCount: 0,
-      document: {}
-    }, {historyProvider: historyStore, sequentialIds: true});
+    const proxyA = new Proxy(
+      {
+        updateCount: 0,
+        document: {}
+      },
+      { sequentialIds: true }
+    );
+    const proxyB = new Proxy(
+      {
+        updateCount: 0,
+        document: {}
+      },
+      { sequentialIds: true }
+    );
+    const master = new Master(
+      {
+        updateCount: 0,
+        document: {}
+      },
+      { historyProvider: historyStore, sequentialIds: true }
+    );
 
     const resultA = proxyA.apply({
       action: CommandAction.Create,
@@ -108,10 +128,10 @@ describe('Integration', () => {
       return;
     }
     proxyA.apply({
-      path: [resultA.createdId!, 'branchA'],
+      path: [resultA.createdId!, "branchA"],
       action: CommandAction.Create,
       props: {
-        childOf: 'a'
+        childOf: "a"
       }
     });
     const batchA1 = proxyA.beginFlush();
@@ -128,14 +148,16 @@ describe('Integration', () => {
     }
     const batchB1 = proxyB.beginFlush();
     proxyB.apply({
-      path: [resultB.createdId!, 'branchB'],
+      path: [resultB.createdId!, "branchB"],
       action: CommandAction.Create,
       props: {
-        childOf: 'b'
+        childOf: "b"
       }
     });
 
-    expect(resultA.isSuccess && resultA.createdId).toBe(resultB.isSuccess && resultB.createdId);
+    expect(resultA.isSuccess && resultA.createdId).toBe(
+      resultB.isSuccess && resultB.createdId
+    );
 
     const applyResA1 = await master.apply(batchA1);
     historyStore.store(applyResA1.applied.from, applyResA1.applied.completions);
@@ -156,7 +178,7 @@ describe('Integration', () => {
 
     const applyResA2 = await master.apply(batchA2);
     historyStore.store(applyResA2.applied.from, applyResA2.applied.completions);
-    
+
     proxyA.endFlush(applyResA2.sync);
     proxyB.endFlush(applyResB2.sync);
 
@@ -165,6 +187,3 @@ describe('Integration', () => {
     expect(proxyA.getDocument()).toStrictEqual(proxyB.getDocument());
   });
 });
-
-
-

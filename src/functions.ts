@@ -1,62 +1,71 @@
 import {
-    Command,
-    CommandCompletion,
-    CompletionBatch,
-    CompletionError,
-    Model
-    } from './types';
-import { PathMapper } from './path-mapper';
+  Command,
+  CommandCompletion,
+  CompletionBatch,
+  CompletionError,
+  Model
+} from "./types";
+import { PathMapper } from "./path-mapper";
 
-export function applyCompletions(model: Model<any>, completions: CommandCompletion[], pathMapper: PathMapper): 
-    undefined | { applied: CompletionBatch, errors?: CompletionError[] } {
-    const startUpdate = model.getUpdateCount();
-    let modifiedBatch: CommandCompletion[] | undefined;
-    let errors: CompletionError[] | undefined;
-    completions.forEach((c, idx) => {
-        let path = c.command.path || [];
-        const mapped = pathMapper.get(path);
-        const command: Command = mapped ? {
-                path: mapped,
-                action: c.command.action,
-                props: c.command.props
-            } : c.command;
-        path = mapped || path;
-        let isModified = mapped != undefined;
-        const result = model.apply(command, c.createdId);
-        if (result.isSuccess === true) {
-            if (result.createdId != undefined && c.createdId != undefined && result.createdId !== c.createdId) {
-                isModified = true;
-                pathMapper.put(path.concat(c.createdId), path.concat(result.createdId));
-            }
-            if (modifiedBatch != undefined || isModified) {
-                modifiedBatch = modifiedBatch || completions.slice(0, idx);
-                const appliedCompletion: CommandCompletion = {
-                    command,
-                    createdId: result.createdId
-                };
-                modifiedBatch.push(appliedCompletion);
-            } 
-        } else {
-            modifiedBatch = modifiedBatch || completions.slice(0, idx);
-            if (errors == undefined) {
-                errors = [];
-            }
-            errors.push({
-                action: c.command.action,
-                path,
-                errorMessage: result.error
-            });
+export function applyCompletions(
+  model: Model<any>,
+  completions: CommandCompletion[],
+  pathMapper: PathMapper
+): undefined | { applied: CompletionBatch; errors?: CompletionError[] } {
+  const startUpdate = model.getUpdateCount();
+  let modifiedBatch: CommandCompletion[] | undefined;
+  let errors: CompletionError[] | undefined;
+  completions.forEach((c, idx) => {
+    let path = c.command.path || [];
+    const mapped = pathMapper.get(path);
+    const command: Command = mapped
+      ? {
+          path: mapped,
+          action: c.command.action,
+          props: c.command.props
         }
-    });
-    if (modifiedBatch) {
-        return {
-            applied: {
-                from: startUpdate, 
-                completions: modifiedBatch
-            },
-            errors
+      : c.command;
+    path = mapped || path;
+    let isModified = mapped != undefined;
+    const result = model.apply(command, c.createdId);
+    if (result.isSuccess === true) {
+      if (
+        result.createdId != undefined &&
+        c.createdId != undefined &&
+        result.createdId !== c.createdId
+      ) {
+        isModified = true;
+        pathMapper.put(path.concat(c.createdId), path.concat(result.createdId));
+      }
+      if (modifiedBatch != undefined || isModified) {
+        modifiedBatch = modifiedBatch || completions.slice(0, idx);
+        const appliedCompletion: CommandCompletion = {
+          command,
+          createdId: result.createdId
         };
+        modifiedBatch.push(appliedCompletion);
+      }
     } else {
-        return undefined;
+      modifiedBatch = modifiedBatch || completions.slice(0, idx);
+      if (errors == undefined) {
+        errors = [];
+      }
+      errors.push({
+        action: c.command.action,
+        path,
+        errorMessage: result.error
+      });
     }
+  });
+  if (modifiedBatch) {
+    return {
+      applied: {
+        from: startUpdate,
+        completions: modifiedBatch
+      },
+      errors
+    };
+  } else {
+    return undefined;
+  }
 }
