@@ -42,7 +42,7 @@ describe('Proxy', () => {
         const result = proxy.apply({
           action: CommandAction.Create
         });
-        if (result.isSuccess == false) {
+        if (!result.isSuccess) {
             fail();
             return;
         }
@@ -104,7 +104,7 @@ describe('Proxy', () => {
         });
         
         proxy.beginFlush();
-        if (result.isSuccess == false) {
+        if (!result.isSuccess) {
             fail();
             return;
         }
@@ -167,7 +167,7 @@ describe('Proxy', () => {
             }
         });
         expect(proxy.getUpdateCount()).toBe(56);
-        if (result.isSuccess == false) {
+        if (!result.isSuccess) {
             fail();
             return;
         }
@@ -228,7 +228,7 @@ describe('Proxy', () => {
         });
         expect(flushResult.idsChanged).toBe(false);
         expect(proxy.getUpdateCount()).toBe(25);
-        if (result.isSuccess == false) {
+        if (!result.isSuccess) {
             fail();
             return;
         }
@@ -247,7 +247,7 @@ describe('Proxy', () => {
             action: CommandAction.Create
           });
 
-        if (result.isSuccess == false) {
+        if (!result.isSuccess) {
             fail();
             return;
         }

@@ -9,7 +9,7 @@ describe('Inner', () => {
         action: CommandAction.Create
       });
       expect(model.getUpdateCount()).toBe(1);
-      if (result.isSuccess == false) {
+      if (result.isSuccess === false) {
           fail();
           return;
       }
@@ -23,7 +23,7 @@ describe('Inner', () => {
         props: {p1: 'aValue'}
       });
       expect(model.getUpdateCount()).toBe(1);
-      if (result.isSuccess == false) {
+      if (result.isSuccess === false) {
         fail();
         return;
     }
@@ -36,7 +36,8 @@ describe('Inner', () => {
             action: CommandAction.Create
         }, 'myId');
         expect(model.getUpdateCount()).toBe(1);
-        expect(model.getDocument()['myId']).toEqual({});
+        const field = 'myId';
+        expect(model.getDocument()[field]).toEqual({});
     });
 
     test('create changes proposed ID when already exists', () => {
@@ -56,7 +57,7 @@ describe('Inner', () => {
       const result = model.apply({
         action: CommandAction.Create
       });
-      if (result.isSuccess == false) {
+      if (result.isSuccess === false) {
         fail();
         return;
       }
@@ -77,7 +78,7 @@ describe('Inner', () => {
       const result = model.apply({
         action: CommandAction.Create
       });
-      if (result.isSuccess == false) {
+      if (result.isSuccess === false) {
         fail();
         return;
       }
@@ -94,7 +95,7 @@ describe('Inner', () => {
       const result = model.apply({
         action: CommandAction.Create
       });
-      if (result.isSuccess == false) {
+      if (result.isSuccess === false) {
         fail();
         return;
       }
@@ -102,7 +103,7 @@ describe('Inner', () => {
         action: CommandAction.Create,
         path: [result.createdId!]
       });
-      if (result2.isSuccess == false) {
+      if (result2.isSuccess === false) {
         fail();
         return;
       }

@@ -1,7 +1,7 @@
-import { Proxy } from './proxy';
 import { CommandAction } from './types';
-import { Master } from './master';
 import { createHistoryStore } from './master.test';
+import { Master } from './master';
+import { Proxy } from './proxy';
 
 describe('Integration', () => {
   test('multiple proxies create tree with same root ID, without history store', async () => {
@@ -24,7 +24,7 @@ describe('Integration', () => {
         branchA: {}
       }
     });
-    if (resultA.isSuccess == false) {
+    if (resultA.isSuccess === false) {
       fail();
       return;
     }
@@ -43,7 +43,7 @@ describe('Integration', () => {
         branchB: {}
       }
     });
-    if (resultB.isSuccess == false) {
+    if (resultB.isSuccess === false) {
       fail();
       return;
     }
@@ -102,7 +102,7 @@ describe('Integration', () => {
         branchA: {}
       }
     });
-    if (resultA.isSuccess == false) {
+    if (resultA.isSuccess === false) {
       fail();
       return;
     }
@@ -121,7 +121,7 @@ describe('Integration', () => {
         branchB: {}
       }
     });
-    if (resultB.isSuccess == false) {
+    if (resultB.isSuccess === false) {
       fail();
       return;
     }

@@ -17,24 +17,24 @@ export class Master<T extends object> {
         this.historyStore = config ? config.historyStore : undefined;
     }
 
-    getSnapshot(): Snapshot<T> {
+    public getSnapshot(): Snapshot<T> {
         return {
             updateCount: this.model.getUpdateCount(),
             document: this.model.getDocument()
         };
     }
 
-    async apply(batch: CompletionBatch): Promise<ApplyResult<T>> {
+    public async apply(batch: CompletionBatch): Promise<ApplyResult<T>> {
         const startUpdate = this.model.getUpdateCount();
 
         const pathMapper = new PathMapper();
         const result = applyCompletions(this.model, batch.completions, pathMapper);
         const applied = result == undefined ? batch : result.applied;
 
-        let sync: Sync<T> | undefined = undefined;
-        if (batch.from != startUpdate) {
+        let sync: Sync<T> | undefined;
+        if (batch.from !== startUpdate) {
             const historyDiff = this.historyStore ? await this.historyStore.get(batch.from, startUpdate) : undefined;
-            if (historyDiff == undefined || (historyDiff.length != startUpdate - batch.from)) {
+            if (historyDiff == undefined || (historyDiff.length !== startUpdate - batch.from)) {
                 sync = {
                     isPartial: false,
                     mappedPaths: pathMapper.getMappings(),
@@ -47,7 +47,7 @@ export class Master<T extends object> {
                 };
                 sync = {
                     isPartial: true,
-                    diff: diff,
+                    diff,
                     mappedPaths: pathMapper.getMappings()
                 };
             }
@@ -56,7 +56,7 @@ export class Master<T extends object> {
             this.historyStore.store(startUpdate, applied.completions);
         }
         return {
-            sync: sync,
+            sync,
             errors: result == undefined ? undefined : result.errors
         };
     }

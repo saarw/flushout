@@ -9,23 +9,23 @@ export class Inner<T extends object> implements Model<T> {
             this.snapshot = { updateCount: 0, document: snapshotOrDocument as T};
         }
     }
-    getUpdateCount(): number {
+    public getUpdateCount(): number {
         return this.snapshot.updateCount;
     }
-    getDocument(): T {
+    public getDocument(): T {
         return this.snapshot.document;
     }
-    apply(command: Command, proposeCreateId?: string): Result {
+    public apply(command: Command, proposeCreateId?: string): Result {
         const path = command.path || [];
         switch (command.action) {
             case CommandAction.Create: {
                 const result = this.navigateToNode(path);
-                if (result.found == true) {
+                if (result.found) {
                     const node = result.node;
                     let attempt = 0;
                     let newId;
                     do {
-                        newId = proposeCreateId != undefined && attempt == 0 ? 
+                        newId = proposeCreateId !== undefined && attempt === 0 ? 
                             proposeCreateId : 
                             this.generateNewId(attempt);
                         attempt += 1;
@@ -44,8 +44,8 @@ export class Inner<T extends object> implements Model<T> {
             }
             case CommandAction.Update: {
                 const result = this.navigateToNode(path);
-                if (result.found == true) {
-                    const propKeys = command.props != undefined ? Object.keys(command.props) : [];
+                if (result.found) {
+                    const propKeys = command.props !== undefined ? Object.keys(command.props) : [];
                     if (propKeys.length > 0) {
                         const copy = JSON.parse(JSON.stringify(command.props));
                         propKeys.forEach(key => {
@@ -64,7 +64,7 @@ export class Inner<T extends object> implements Model<T> {
             }
             case CommandAction.Delete: {
                 const result = this.navigateToNode(path.slice(0, path.length - 1));
-                if (result.found == true) {
+                if (result.found) {
                     delete result.node[path[path.length - 1]];
                     this.snapshot.updateCount += 1;
                     return {
@@ -98,7 +98,7 @@ export class Inner<T extends object> implements Model<T> {
         return { found: true, node: n };
     }
 
-    generateNewId(attempt: number): string {
+    private generateNewId(attempt: number): string {
         if (this.sequentialIds) {
             return (this.snapshot.updateCount + 1 + attempt).toString();
         } else {

@@ -64,7 +64,7 @@ describe('Master', () => {
   
     test('merge two add commands with history produces partial sync', async () => {
       const historyStore: HistoryStore = createHistoryStore();
-      const master = new Master({ updateCount: 0, document: {} }, { historyStore: historyStore });
+      const master = new Master({ updateCount: 0, document: {} }, { historyStore });
       const batch: CompletionBatch = {
         completions: [{
             command: {

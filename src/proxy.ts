@@ -1,7 +1,15 @@
-import { Model, Snapshot, Command, Result, CommandCompletion, CompletionBatch, Sync } from "./types";
-import { PathMapper } from "./path-mapper";
-import { applyCompletions } from "./functions";
-import { Inner } from "./inner";
+import { applyCompletions } from './functions';
+import {
+    Command,
+    CommandCompletion,
+    CompletionBatch,
+    Model,
+    Result,
+    Snapshot,
+    Sync
+    } from './types';
+import { Inner } from './inner';
+import { PathMapper } from './path-mapper';
 
 export interface FlushResult {
     // If IDs in the model may have changed
@@ -36,17 +44,17 @@ export class Proxy<T extends object> implements Model<T> {
         this.lastCommittedDocument = JSON.stringify(snapshot.document);
         this.lastCommittedUpdateCount = snapshot.updateCount;
     }
-    getDocument(): T {
+    public getDocument(): T {
         return this.model.getDocument();
     }
-    getUpdateCount(): number {
+    public getUpdateCount(): number {
         return this.model.getUpdateCount();
     }
-    apply(command: Command): Result {
+    public apply(command: Command): Result {
         const result = this.model.apply(command);
-        if (result.isSuccess == true) {
+        if (result.isSuccess) {
             // Only store successfully applied commands in delegates
-            this.uncommittedCompletions.push({ command: command, createdId: result.createdId });
+            this.uncommittedCompletions.push({ command, createdId: result.createdId });
         } else {
             // If there's a risk that the failed command modified the model, we would want to
             // rebuild it from our last committed snapshot and uncommitted commands, but we
@@ -59,7 +67,7 @@ export class Proxy<T extends object> implements Model<T> {
      * more changes that get sent in the next flush. The flush must be ended with endFlush
      * or cancelFlush before the next flush can begin.
      */
-    beginFlush(): CompletionBatch {
+    public beginFlush(): CompletionBatch {
         if (this.nextCommittedDocument != undefined) {
             throw Error('Flush already in progress');
         }
@@ -77,7 +85,7 @@ export class Proxy<T extends object> implements Model<T> {
      * to be sent in the next flush. Can be used if the flush fails to communicate with the master.
      * @param flush The started the flush.
      */
-    cancelFlush(flush: CompletionBatch) {
+    public cancelFlush(flush: CompletionBatch) {
         this.uncommittedCompletions = flush.completions.concat(this.uncommittedCompletions);
         this.nextCommittedDocument = undefined;
         this.nextCommittedUpdateCount = undefined;
@@ -89,7 +97,7 @@ export class Proxy<T extends object> implements Model<T> {
      * that specifies how to update the proxy to latest stage of the Master.
      * 
      */
-    endFlush(sync?: Sync<T>): FlushResult {
+    public endFlush(sync?: Sync<T>): FlushResult {
         let idsChanged = false;
         if (this.nextCommittedDocument == undefined || this.nextCommittedUpdateCount == undefined) {
             return {
@@ -103,7 +111,7 @@ export class Proxy<T extends object> implements Model<T> {
             this.nextCommittedDocument = undefined;
             this.nextCommittedUpdateCount = undefined;
         } else {
-            if (sync.isPartial == true) {
+            if (sync.isPartial) {
                 const err = this.applyDiff(sync.diff);
                 if (err) {
                     return {
@@ -129,7 +137,7 @@ export class Proxy<T extends object> implements Model<T> {
             this.nextCommittedUpdateCount = undefined;
         }
         return {
-            idsChanged: idsChanged
+            idsChanged
         };
     }
     private applyDiff(diff: CompletionBatch): undefined | string {
