@@ -1,14 +1,27 @@
 import { PathMapper } from "./path-mapper";
-import { HistoryStore, Model, CompletionBatch, ApplyResult } from "./types";
+import { HistoryStore, Model, CompletionBatch, ApplyResult, Snapshot, Sync } from "./types";
 import { applyCompletions } from "./functions";
+import { Inner } from "./inner";
+
+export interface MasterOptions {
+    historyStore?: HistoryStore,
+    sequentialIds?: boolean         // used for testing
+}
 
 export class Master<T extends object> {
-    readonly historyStore?: HistoryStore;
-    model: Model<T>;
+    private readonly historyStore?: HistoryStore;
+    private readonly model: Model<T>;
 
-    constructor(model: Model<T>, historyStore?: HistoryStore) {
-        this.model = model;
-        this.historyStore = historyStore;
+    constructor(snapshot: Snapshot<T>, options?: MasterOptions) {
+        this.model = new Inner(snapshot, options ? options.sequentialIds : false);
+        this.historyStore = options ? options.historyStore : undefined;
+    }
+
+    getSnapshot(): Snapshot<T> {
+        return {
+            updateCount: this.model.getUpdateCount(),
+            document: this.model.getDocument()
+        };
     }
 
     async apply(batch: CompletionBatch): Promise<ApplyResult<T>> {
@@ -18,17 +31,14 @@ export class Master<T extends object> {
         const result = applyCompletions(this.model, batch.completions, pathMapper);
         const applied = result == undefined ? batch : result.applied;
 
-        let sync = undefined;
+        let sync: Sync<T>;;
         if (batch.from != startUpdate) {
             const historyDiff = this.historyStore ? await this.historyStore.get(batch.from, startUpdate) : undefined;
             if (historyDiff == undefined || (historyDiff.length != startUpdate - batch.from)) {
                 sync = {
                     isPartial: false,
-                    mappedPath: pathMapper.getMappings(),
-                    latest: {
-                        updateCount: this.model.getUpdateCount(),
-                        document: this.model.getDocument()
-                    }
+                    mappedPaths: pathMapper.getMappings(),
+                    latest: this.getSnapshot()
                 };
             } else {
                 const diff: CompletionBatch = {
@@ -38,7 +48,7 @@ export class Master<T extends object> {
                 sync = {
                     isPartial: true,
                     diff: diff,
-                    mappedPath: pathMapper.getMappings()
+                    mappedPaths: pathMapper.getMappings()
                 };
             }
         }

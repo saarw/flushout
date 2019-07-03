@@ -7,7 +7,7 @@ describe('Proxy', () => {
         updateCount: 0,
         document: {}
       };
-      const proxy = new Proxy(snapshot);
+      const proxy = new Proxy(snapshot, { sequentialIds: true });
       proxy.performCommand({
         action: CommandAction.Create
       });
@@ -186,5 +186,70 @@ describe('Proxy', () => {
         });
         expect(proxy.getUpdateCount()).toBe(24);
         expect(proxy.getDocument()['5345']).toEqual({});
+    });
+
+    test('endFlush with partial sync applies uncommitted commands', async () => {
+        const snapshot = {
+          updateCount: 23,
+          document: {}
+        };
+        const proxy = new Proxy(snapshot);
+        proxy.beginFlush();
+
+        const result = proxy.performCommand({
+            action: CommandAction.Create
+          });
+
+        const flushResult = proxy.endFlush({
+            isPartial: true,
+            diff: {
+                from: 23,
+                completions: [
+                    {
+                        command: {
+                            action: CommandAction.Create
+                        },
+                        createdId: '5345'
+                    }
+                ]
+            }
+        });
+        expect(flushResult.idsChanged).toBe(false);
+        expect(proxy.getUpdateCount()).toBe(25);
+        expect(proxy.getDocument()[result.isSuccess && result.createdId]).toEqual({});
+    });
+
+    test('endFlush with partial sync remaps existing uncommitted paths', async () => {
+        const snapshot = {
+          updateCount: 23,
+          document: {}
+        };
+        const proxy = new Proxy(snapshot);
+        proxy.beginFlush();
+
+        const result = proxy.performCommand({
+            action: CommandAction.Create
+          });
+
+        const flushResult = proxy.endFlush({
+            isPartial: true,
+            diff: {
+                from: 23,
+                completions: [
+                    {
+                        command: {
+                            action: CommandAction.Create,
+                            props: {
+                                syncCreated: true
+                            }
+                        },
+                        createdId: result.isSuccess && result.createdId
+                    }
+                ]
+            }
+        });
+        expect(flushResult.idsChanged).toBe(true);
+        expect(proxy.getUpdateCount()).toBe(25);
+        expect(proxy.getDocument()[result.isSuccess && result.createdId]).toEqual({ syncCreated: true });
     });
 });

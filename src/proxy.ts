@@ -9,6 +9,10 @@ export interface FlushResult {
     error?: string;
 }
 
+export interface ProxyOptions {
+    sequentialIds: boolean
+}
+
 export class Proxy<T extends object> implements Model<T> {
     private lastCommittedDocument: string;
     private lastCommittedUpdateCount: number;
@@ -16,8 +20,8 @@ export class Proxy<T extends object> implements Model<T> {
     private uncommittedCompletions: CommandCompletion[];
     private nextCommittedDocument?: string;
     private nextCommittedUpdateCount?: number;
-    constructor(snapshot: Snapshot<T>) {
-        this.model = new Inner(snapshot);
+    constructor(snapshot: Snapshot<T>, private options?: ProxyOptions) {
+        this.model = new Inner(snapshot, options ? options.sequentialIds : false);
         this.uncommittedCompletions = [];
         this.lastCommittedDocument = JSON.stringify(snapshot.document);
         this.lastCommittedUpdateCount = snapshot.updateCount;
@@ -66,8 +70,7 @@ export class Proxy<T extends object> implements Model<T> {
             this.lastCommittedUpdateCount = this.nextCommittedUpdateCount;
             this.nextCommittedDocument = undefined;
             this.nextCommittedUpdateCount = undefined;
-        }
-        else {
+        } else {
             if (sync.isPartial == true) {
                 const err = this.applyDiff(sync.diff);
                 if (err) {
@@ -79,13 +82,14 @@ export class Proxy<T extends object> implements Model<T> {
                 idsChanged = sync.mappedPaths != undefined;
             }
             else {
-                this.model = new Inner(sync.latest);
+                this.model = new Inner(sync.latest, this.options ? this.options.sequentialIds : false);
                 idsChanged = true;
             }
             this.lastCommittedDocument = JSON.stringify(this.model.getDocument());
             this.lastCommittedUpdateCount = this.model.getUpdateCount();
             const uncommittedApplied = applyCompletions(this.model, this.uncommittedCompletions, new PathMapper(sync.mappedPaths));
             if (uncommittedApplied) {
+                idsChanged = true;
                 this.uncommittedCompletions = uncommittedApplied.applied.completions;
                 // Silently discard errors in uncommitted
             }
@@ -101,7 +105,7 @@ export class Proxy<T extends object> implements Model<T> {
             this.model = new Inner({
                 updateCount: this.lastCommittedUpdateCount,
                 document: JSON.parse(this.lastCommittedDocument)
-            });
+            }, this.options ? this.options.sequentialIds : false);
             const diffApplied = applyCompletions(this.model, diff.completions, new PathMapper());
             if (diffApplied && diffApplied.errors) {
                 return 'Errors when applying diff on previous model';

@@ -4,7 +4,7 @@ import { CommandAction } from ".";
 
 describe('Inner', () => {
     test('create without initial values', () => {
-      const model = new Inner({});
+      const model = new Inner({}, false);
       const result = model.performCommand({
         action: CommandAction.Create
       });
@@ -13,7 +13,7 @@ describe('Inner', () => {
     });
   
     test('create with initial values', () => {
-      const model = new Inner({});
+      const model = new Inner({}, false);
       const result = model.performCommand({
         action: CommandAction.Create, 
         props: {p1: 'aValue'}
@@ -22,8 +22,8 @@ describe('Inner', () => {
       expect(model.getDocument()[result.isSuccess && result.createdId].p1).toBe('aValue');
     });
 
-    test('create without proposed ID', () => {
-        const model = new Inner({});
+    test('create with proposed ID', () => {
+        const model = new Inner({}, false);
         model.performCommand({
             action: CommandAction.Create
         }, 'myId');
@@ -34,7 +34,7 @@ describe('Inner', () => {
     test('create changes proposed ID when already exists', () => {
         const model = new Inner({
             myId: {}
-        });
+        }, false);
         const result = model.performCommand({
             action: CommandAction.Create
         }, 'myId');
@@ -44,7 +44,7 @@ describe('Inner', () => {
     });
   
     test('create and update', () => {
-      const model = new Inner({});
+      const model = new Inner({}, false);
       const result = model.performCommand({
         action: CommandAction.Create
       });
@@ -61,7 +61,7 @@ describe('Inner', () => {
     });
   
     test('create and delete', () => {
-      const model = new Inner({});
+      const model = new Inner({}, false);
       const result = model.performCommand({
         action: CommandAction.Create
       });
@@ -74,7 +74,7 @@ describe('Inner', () => {
     });
   
     test('create branch and delete middle', () => {
-      const model = new Inner({});
+      const model = new Inner({}, false);
       const result = model.performCommand({
         action: CommandAction.Create
       });

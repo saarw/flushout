@@ -1,7 +1,7 @@
 import { Model, Snapshot, Command, Result, CommandAction } from "./types";
 export class Inner<T extends object> implements Model<T> {
     private snapshot: Snapshot<T>;
-    constructor(snapshotOrDocument: Snapshot<T> | T) {
+    constructor(snapshotOrDocument: Snapshot<T> | T, private sequentialIds: boolean) {
         if ((snapshotOrDocument as Snapshot<T>).updateCount != undefined &&
             (snapshotOrDocument as Snapshot<T>).document != undefined) {
             this.snapshot = snapshotOrDocument as Snapshot<T>;
@@ -96,6 +96,10 @@ export class Inner<T extends object> implements Model<T> {
     }
 
     generateNewId(attempt: number): string {
-        return (this.snapshot.updateCount + 1 + attempt).toString();
+        if (this.sequentialIds) {
+            return (this.snapshot.updateCount + 1 + attempt).toString();
+        } else {
+            return Math.round(Math.random() * Number.MAX_SAFE_INTEGER).toString();
+        }
     }
 }
