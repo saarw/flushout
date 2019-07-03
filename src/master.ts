@@ -1,20 +1,32 @@
 import { PathMapper } from "./path-mapper";
-import { HistoryStore, Model, CompletionBatch, ApplyResult, Snapshot, Sync } from "./types";
+import { Model, CompletionBatch, Snapshot, Sync, CompletionError, CommandCompletion } from "./types";
 import { applyCompletions } from "./functions";
 import { Inner } from "./inner";
 
+export interface ApplyResult<T extends object> {
+    sync?: Sync<T>;
+    applied: CompletionBatch,
+    errors?: CompletionError[]
+}
+
 export interface MasterConfig {
-    historyStore?: HistoryStore,
+    historyProvider?: HistoryProvider,
     sequentialIds?: boolean         // used for testing
 }
 
+
+export interface HistoryProvider {
+    // Returns the history from the specified update count, if available, otherwise undefined
+    get(from: number, to: number): Promise<CommandCompletion[] | undefined>;
+}
+
 export class Master<T extends object> {
-    private readonly historyStore?: HistoryStore;
+    private readonly historyStore?: HistoryProvider;
     private readonly model: Model<T>;
 
     constructor(snapshot: Snapshot<T>, config?: MasterConfig) {
         this.model = new Inner(snapshot, config ? !!config.sequentialIds : false);
-        this.historyStore = config ? config.historyStore : undefined;
+        this.historyStore = config ? config.historyProvider : undefined;
     }
 
     public getSnapshot(): Snapshot<T> {
@@ -29,7 +41,10 @@ export class Master<T extends object> {
 
         const pathMapper = new PathMapper();
         const result = applyCompletions(this.model, batch.completions, pathMapper);
-        const applied = result == undefined ? batch : result.applied;
+        const applied: CompletionBatch = {
+            from: startUpdate,
+            completions: result == undefined ? batch.completions : result.applied.completions
+        };
 
         let sync: Sync<T> | undefined;
         if (batch.from !== startUpdate) {
@@ -52,11 +67,9 @@ export class Master<T extends object> {
                 };
             }
         }
-        if (this.historyStore) {
-            this.historyStore.store(startUpdate, applied.completions);
-        }
         return {
             sync,
+            applied,
             errors: result == undefined ? undefined : result.errors
         };
     }

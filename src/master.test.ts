@@ -1,6 +1,7 @@
 import { Inner } from "./inner";
 
-import { Master, CompletionBatch, CommandAction, HistoryStore, CommandCompletion } from ".";
+import { Master, CompletionBatch, CommandAction, CommandCompletion } from ".";
+import { HistoryProvider } from "./master";
 
 describe('Master', () => {
     test('apply batch with command to create', async () => {
@@ -63,8 +64,8 @@ describe('Master', () => {
     });
   
     test('merge two add commands with history produces partial sync', async () => {
-      const historyStore: HistoryStore = createHistoryStore();
-      const master = new Master({ updateCount: 0, document: {} }, { historyStore });
+      const historyStore: HistoryProvider & any = createHistoryStore();
+      const master = new Master({ updateCount: 0, document: {} }, { historyProvider: historyStore });
       const batch: CompletionBatch = {
         completions: [{
             command: {
@@ -74,8 +75,11 @@ describe('Master', () => {
         }],
         from: 0
       };
-      master.apply(batch);
-      const result = await  master.apply(batch);
+      const r1 = await master.apply(batch);
+      historyStore.store(r1.applied.from, r1.applied.completions);
+
+      const result = await master.apply(batch);
+      historyStore.store(result.applied.from, result.applied.completions);
       
       if (result.sync == undefined) {
         fail();
@@ -88,7 +92,11 @@ describe('Master', () => {
   });
   
 
-export function createHistoryStore(): HistoryStore & any {
+export function createHistoryStore(): 
+    HistoryProvider & { 
+        history: CommandCompletion[], 
+        store(from: number, completions: CommandCompletion[]): Promise<void> 
+    } {
     return {
       history: [],
       get(from: number, to: number): Promise<CommandCompletion[]> {
