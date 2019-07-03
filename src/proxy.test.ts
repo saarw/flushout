@@ -272,4 +272,25 @@ describe('Proxy', () => {
         expect(proxy.getUpdateCount()).toBe(25);
         expect(proxy.getDocument()[result.createdId!]).toEqual({ syncCreated: true });
     });
+
+    test('cancelFlush allows new beginFlush', () => {
+        const snapshot = {
+            updateCount: 23,
+            document: {}
+          };
+          const proxy = new Proxy<any>(snapshot);
+  
+          proxy.apply({
+              action: CommandAction.Create
+            });
+          const flush1 = proxy.beginFlush();
+          proxy.apply({
+            action: CommandAction.Create
+          });
+          proxy.cancelFlush(flush1);
+          const flush2 = proxy.beginFlush();
+          expect(flush1.completions.length).toBe(1);
+          expect(flush2.from).toBe(23);
+          expect(flush2.completions.length).toBe(2);
+    });
 });
