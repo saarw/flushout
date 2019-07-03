@@ -1,15 +1,20 @@
 export type Result = {isSuccess: true, createdId?: string} | {isSuccess: false, error: string};
 
-export type Sync<T extends object> = { 
+/**
+ * A sync to update a Proxy to the Master model's state after a flush. mappedPaths are ID's that
+ * got renamed when Create commands resulted in name collisions in the master. Depending on
+ * whether the Master has access to history, it may return a full or partial sync that either
+ * returns a complete snapshot, or the commands necessary to update the proxy to the master's state.
+ */
+export type Sync<T extends object> = { mappedPaths?: Record<string, string[]> } & 
+    ({ 
         isPartial: true, 
         diff: CompletionBatch,
-        mappedPaths?: Record<string, string[]>
     } | 
     { 
         isPartial: false,
-        latest: Snapshot<T>,
-        mappedPaths?: Record<string, string[]>
-    };
+        latest: Snapshot<T>
+    });
 
 export enum CommandAction {
     Create = 'create',

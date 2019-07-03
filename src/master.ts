@@ -4,8 +4,8 @@ import { applyCompletions } from "./functions";
 import { Inner } from "./inner";
 
 export interface ApplyResult<T extends object> {
-    sync?: Sync<T>;
     applied: CompletionBatch,
+    sync?: Sync<T>;
     errors?: CompletionError[]
 }
 
@@ -16,17 +16,23 @@ export interface MasterConfig {
 
 
 export interface HistoryProvider {
-    // Returns the history from the specified update count, if available, otherwise undefined
+    /** 
+     * Returns the history from the specified update count, if available, otherwise undefined
+     */
     get(from: number, to: number): Promise<CommandCompletion[] | undefined>;
 }
 
+/**
+ * Updates the master model and responds to flush batches, providing diffs from an optional
+ * history provider.
+ */
 export class Master<T extends object> {
-    private readonly historyStore?: HistoryProvider;
+    private readonly historyProvider?: HistoryProvider;
     private readonly model: Model<T>;
 
     constructor(snapshot: Snapshot<T>, config?: MasterConfig) {
         this.model = new Inner(snapshot, config ? !!config.sequentialIds : false);
-        this.historyStore = config ? config.historyProvider : undefined;
+        this.historyProvider = config ? config.historyProvider : undefined;
     }
 
     public getSnapshot(): Snapshot<T> {
@@ -36,6 +42,15 @@ export class Master<T extends object> {
         };
     }
 
+    /**
+     * Applies the flushed commands to the model and returns a result that contains the commands
+     * that were successfully applied and from what update count, any errors that occurred when 
+     * applying the commands, and optionally a sync object to bring the requesting Proxy up to 
+     * the same state as the master. If the Master was constructed with a history provider, the
+     * sync object may be a partial diff that returns the commands needed to update the proxy
+     * from the batch's update count to the master's current state.  
+     * @param batch 
+     */
     public async apply(batch: CompletionBatch): Promise<ApplyResult<T>> {
         const startUpdate = this.model.getUpdateCount();
 
@@ -48,7 +63,7 @@ export class Master<T extends object> {
 
         let sync: Sync<T> | undefined;
         if (batch.from !== startUpdate) {
-            const historyDiff = this.historyStore ? await this.historyStore.get(batch.from, startUpdate) : undefined;
+            const historyDiff = this.historyProvider ? await this.historyProvider.get(batch.from, startUpdate) : undefined;
             if (historyDiff == undefined || (historyDiff.length !== startUpdate - batch.from)) {
                 sync = {
                     isPartial: false,
