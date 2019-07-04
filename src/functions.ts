@@ -14,7 +14,7 @@ export function applyCompletions<T extends object>(
   model: Model<T>,
   completions: CommandCompletion[],
   pathMapper: PathMapper,
-  interceptor?: Interceptor<T>
+  intercept?: Interceptor<T>
 ): undefined | { applied: CompletionBatch; errors?: CompletionError[] } {
   const startUpdate = model.getCommandCount();
   let modifiedBatch: CommandCompletion[] | undefined;
@@ -30,7 +30,7 @@ export function applyCompletions<T extends object>(
         }
       : c.command;
     path = mapped || path;
-    const interception = interceptor ? interceptor.intercept(model.getDocument(), command) : undefined;
+    const interception = intercept ? intercept(model.getDocument(), command) : undefined;
     let isModified = mapped != undefined || interception != undefined;
     const resultWithCommand = applyCommandWithInterception(model, command, interception, c.createdId);
     const result: Result = resultWithCommand.result 

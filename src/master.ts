@@ -25,9 +25,9 @@ export interface MasterConfig<T extends object> {
 
 export interface HistoryProvider {
   /**
-   * Returns the history from the specified update count, if available, otherwise undefined
+   * Returns the history from the specified command count, if available, otherwise undefined
    */
-  get(from: number, to: number): Promise<CommandCompletion[] | undefined>;
+  (from: number, to: number): Promise<CommandCompletion[] | undefined>;
 }
 
 /**
@@ -75,7 +75,7 @@ export class Master<T extends object> {
     let sync: Sync<T> | undefined;
     if (batch.from !== startUpdate) {
       const historyDiff = this.historyProvider
-        ? await this.historyProvider.get(batch.from, startUpdate)
+        ? await this.historyProvider(batch.from, startUpdate)
         : undefined;
       if (
         historyDiff == undefined ||

@@ -19,8 +19,8 @@ export interface FlushResult {
 }
 
 export interface ProxyConfig<T extends object> {
-  sequentialIds: boolean;
-  interceptor?: Interceptor<T>;
+  sequentialIds?: boolean;
+  intercept?: Interceptor<T>;
 }
 
 /**
@@ -41,7 +41,7 @@ export class Proxy<T extends object> implements Model<T> {
    * @param config Optional configuration options.
    */
   constructor(snapshot: Snapshot<T>, private config?: ProxyConfig<T>) {
-    this.model = new Inner(snapshot, config ? config.sequentialIds : false);
+    this.model = new Inner(snapshot, config && config.sequentialIds != undefined ? config.sequentialIds : false);
     this.uncommittedCompletions = [];
     this.lastCommittedDocument = JSON.stringify(snapshot.document);
     this.lastCommittedUpdateCount = snapshot.commandCount;
@@ -53,8 +53,8 @@ export class Proxy<T extends object> implements Model<T> {
     return this.model.getCommandCount();
   }
   public apply(command: Command): Result {
-    const interception = this.config != undefined && this.config.interceptor != undefined ? 
-        this.config.interceptor.intercept(this.model.getDocument(), command) : 
+    const interception = this.config != undefined && this.config.intercept != undefined ? 
+        this.config.intercept(this.model.getDocument(), command) : 
         undefined;
     const resultWithCommand = applyCommandWithInterception(this.model, command, interception);
     if (resultWithCommand.result.isSuccess) {
@@ -100,6 +100,11 @@ export class Proxy<T extends object> implements Model<T> {
     this.nextCommittedDocument = undefined;
     this.nextCommittedUpdateCount = undefined;
   }
+
+  public hasUnflushedCommands(): boolean {
+    return this.uncommittedCompletions.length > 0;
+  }
+
   /**
    * Ends an ongoing flush with the result of how the flushed changes were reconciled
    * at the Master.
@@ -136,7 +141,7 @@ export class Proxy<T extends object> implements Model<T> {
       } else {
         this.model = new Inner(
           sync.latest,
-          this.config ? this.config.sequentialIds : false
+          this.config && this.config.sequentialIds != undefined ? this.config.sequentialIds : false
         );
         idsChanged = true;
       }
@@ -166,7 +171,7 @@ export class Proxy<T extends object> implements Model<T> {
           commandCount: this.lastCommittedUpdateCount,
           document: JSON.parse(this.lastCommittedDocument)
         },
-        this.config ? this.config.sequentialIds : false
+        this.config && this.config.sequentialIds != undefined ? this.config.sequentialIds : false
       );
       const diffApplied = applyCompletions(
         this.model,

@@ -66,7 +66,7 @@ export interface Interceptor<T extends object> {
      * @param document The current version of the document, the interceptor must not modify the document.
      * @param command The command that should be approved (return undefined), rejector or have its props modified.
      */
-    intercept(document: T, command: Command): undefined | CommandInterception;
+    (document: T, command: Command): undefined | CommandInterception;
 }
 
 export interface Snapshot<T extends object> {

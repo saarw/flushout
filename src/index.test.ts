@@ -94,7 +94,7 @@ describe("Integration", () => {
   });
 
   test("multiple proxies create tree with same root ID, with history store", async () => {
-    const historyStore: HistoryProvider & any = createHistoryStore();
+    const historyStore = createHistoryStore();
     const proxyA = new Proxy(
       {
         commandCount: 0,
@@ -114,7 +114,7 @@ describe("Integration", () => {
         commandCount: 0,
         document: {}
       },
-      { historyProvider: historyStore, sequentialIds: true }
+      { historyProvider: historyStore.createProvider(), sequentialIds: true }
     );
 
     const resultA = proxyA.apply({

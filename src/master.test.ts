@@ -73,10 +73,10 @@ describe("Master", () => {
   });
 
   test("merge two add commands with history produces partial sync", async () => {
-    const historyStore: HistoryProvider & any = createHistoryStore();
+    const historyStore = createHistoryStore();
     const master = new Master(
       { commandCount: 0, document: {} },
-      { historyProvider: historyStore }
+      { historyProvider: historyStore.createProvider() }
     );
     const batch: CompletionBatch = {
       completions: [
@@ -107,14 +107,18 @@ describe("Master", () => {
   });
 });
 
-export function createHistoryStore(): HistoryProvider & {
+export function createHistoryStore(): { 
+  createProvider(): HistoryProvider,
   history: CommandCompletion[];
   store(from: number, completions: CommandCompletion[]): Promise<void>;
 } {
   return {
     history: [],
-    get(from: number, to: number): Promise<CommandCompletion[]> {
-      return Promise.resolve(this.history.slice(from, to));
+    createProvider() { 
+      const store = this;
+      return (from: number, to: number): Promise<CommandCompletion[]> => {
+        return Promise.resolve(store.history.slice(from, to));
+      }
     },
     store(from: number, completions: CommandCompletion[]): Promise<void> {
       if (this.history.length === from) {
