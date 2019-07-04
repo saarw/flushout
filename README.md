@@ -10,31 +10,26 @@ Flushout design properties
 * Optimizes for reducing network traffic and load on the server in favor of performing more work on the client
 
 # How it works
-## Clients
-Clients initialize a Proxy model with the latest snapshot from the backend. They then apply commands to modify the model any may periodically perform flushes to synchronize their state with the remote master.
-
-### Flushout document
+## Document and snapshot
 A document in Flushout is a simple JavaScript object that may contain primitive fields or additional objects that form a tree graph. Applications modify the model by applying commands with changes they want to make. All commands include an action and allow specifying a path to where in the document graph the command should operate (omitting the path uses the root of the document). A snapshot is simply a document and a count of how many commands have been applied to the document.
 
-### Commands   
-#### Create
-Creates a new node in the document graph, optionally initializing it with the values in the commands props object. The node will receive a random ID.
+## Client proxies
+Clients initialize a Proxy model with the latest snapshot from the backend. They then apply commands to modify the model any may periodically perform flushes to synchronize their state with the remote master.
 
-#### Update
-Updates a node in the document graph by setting the document keys specified in the command's props object.
-
-#### Delete
-Deletes the node in the document graph.
-
-### Collisions
-* Updates simply overwrite any old values, but applications that preserve command history may be able to implement more advanced merge operations.
-* Updates commands on deleted nodes will fail silently.
-* If two proxies perform a create command and create a node with the same ID before flushing to the master, the flush will remap any queued up commands in the second proxy to the new node's ID and notify the application that IDs may have changed.
-
-### Server
+### Remote master
 The server initialize a Master model with the latest snapshot and apply flushes it receives from the clients to update the model and produce sync messages that let the proxies update their state to that of the master.
 
+### Commands   
+**Create** - Creates a new node in the document graph, optionally initializing it with the values in the commands props object. The node will receive a random ID and the ID is returned to the application.   
 
+**Update** - Updates a node in the document graph by setting the document keys specified in the command's props object.   
+
+**Delete** - Deletes the node in the document graph.   
+
+### Collisions
+* Updates to the same node will simply overwrite each other, but applications that preserve command history may be able to implement more advanced merge operations.
+* Updates on deleted nodes will fail silently.
+* If two proxies perform create commands that create a node with the same ID before flushing to the master, the flush will remap any queued up commands in the second proxy to the new node's ID and notify the application that IDs may have changed.
 
 ## Background
 Flushout was built to support https://plotdash.com to offer a Google Docs-like experience where data model is always immediately responsive to the user while backend communication happens in the background. Flushout was also inspired by TypeScript's rise as a full-stack language and the powerful benefit it provides to share code between server and many sorts of clients.
