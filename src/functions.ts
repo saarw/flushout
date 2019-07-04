@@ -1,16 +1,20 @@
 import {
   Command,
   CommandCompletion,
+  CommandInterception,
   CompletionBatch,
   CompletionError,
-  Model
+  Model,
+  Interceptor,
+  Result
 } from "./types";
 import { PathMapper } from "./path-mapper";
 
-export function applyCompletions(
-  model: Model<any>,
+export function applyCompletions<T extends object>(
+  model: Model<T>,
   completions: CommandCompletion[],
-  pathMapper: PathMapper
+  pathMapper: PathMapper,
+  interceptor?: Interceptor<T>
 ): undefined | { applied: CompletionBatch; errors?: CompletionError[] } {
   const startUpdate = model.getCommandCount();
   let modifiedBatch: CommandCompletion[] | undefined;
@@ -18,7 +22,7 @@ export function applyCompletions(
   completions.forEach((c, idx) => {
     let path = c.command.path || [];
     const mapped = pathMapper.get(path);
-    const command: Command = mapped
+    let command: Command = mapped
       ? {
           path: mapped,
           action: c.command.action,
@@ -26,8 +30,13 @@ export function applyCompletions(
         }
       : c.command;
     path = mapped || path;
-    let isModified = mapped != undefined;
-    const result = model.apply(command, c.createdId);
+    const interception = interceptor ? interceptor.intercept(model.getDocument(), command) : undefined;
+    let isModified = mapped != undefined || interception != undefined;
+    const resultWithCommand = applyCommandWithInterception(model, command, interception, c.createdId);
+    const result: Result = resultWithCommand.result 
+    if (resultWithCommand.modifiedCommand) {
+        command = resultWithCommand.modifiedCommand;
+    }
     if (result.isSuccess === true) {
       if (
         result.createdId != undefined &&
@@ -68,4 +77,34 @@ export function applyCompletions(
   } else {
     return undefined;
   }
+}
+
+export function applyCommandWithInterception<T extends object>(model: Model<T>, 
+    command: Command, 
+    interception?: CommandInterception,
+    proposedCreateId?: string): {
+        result: Result,
+        modifiedCommand?: Command // set if interception wasn't rejection
+    } {
+    if (interception == undefined) {
+        return {
+            result: model.apply(command, proposedCreateId)
+        };
+    } else if ((interception as {newProps: any}).newProps != undefined) {
+        const c = {
+            path: command.path,
+            action: command.action,
+            props: (interception as {newProps: any}).newProps
+        };
+        return {
+            result: model.apply(c, proposedCreateId),
+            modifiedCommand: c
+        };
+    } 
+    return {
+        result: {
+            isSuccess: false,
+            error: (interception as {rejection: string}).rejection
+        }
+    };
 }

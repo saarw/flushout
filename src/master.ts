@@ -5,7 +5,8 @@ import {
   Snapshot,
   Sync,
   CompletionError,
-  CommandCompletion
+  CommandCompletion,
+  Interceptor
 } from "./types";
 import { applyCompletions } from "./functions";
 import { Inner } from "./inner";
@@ -16,8 +17,9 @@ export interface ApplyResult<T extends object> {
   errors?: CompletionError[];
 }
 
-export interface MasterConfig {
+export interface MasterConfig<T extends object> {
   historyProvider?: HistoryProvider;
+  interceptor?: Interceptor<T>;
   sequentialIds?: boolean; // used for testing
 }
 
@@ -35,10 +37,12 @@ export interface HistoryProvider {
 export class Master<T extends object> {
   private readonly historyProvider?: HistoryProvider;
   private readonly model: Model<T>;
+  private readonly interceptor?: Interceptor<T>;
 
-  constructor(snapshot: Snapshot<T>, config?: MasterConfig) {
+  constructor(snapshot: Snapshot<T>, config?: MasterConfig<T>) {
     this.model = new Inner(snapshot, config ? !!config.sequentialIds : false);
     this.historyProvider = config ? config.historyProvider : undefined;
+    this.interceptor = config ? config.interceptor : undefined;
   }
 
   public getSnapshot(): Snapshot<T> {
@@ -61,7 +65,7 @@ export class Master<T extends object> {
     const startUpdate = this.model.getCommandCount();
 
     const pathMapper = new PathMapper();
-    const result = applyCompletions(this.model, batch.completions, pathMapper);
+    const result = applyCompletions(this.model, batch.completions, pathMapper, this.interceptor);
     const applied: CompletionBatch = {
       from: startUpdate,
       completions:

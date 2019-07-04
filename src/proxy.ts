@@ -1,4 +1,4 @@
-import { applyCompletions } from "./functions";
+import { applyCompletions, applyCommandWithInterception } from "./functions";
 import {
   Command,
   CommandCompletion,
@@ -6,7 +6,8 @@ import {
   Model,
   Result,
   Snapshot,
-  Sync
+  Sync,
+  Interceptor
 } from "./types";
 import { Inner } from "./inner";
 import { PathMapper } from "./path-mapper";
@@ -17,8 +18,9 @@ export interface FlushResult {
   error?: string;
 }
 
-export interface ProxyConfig {
+export interface ProxyConfig<T extends object> {
   sequentialIds: boolean;
+  interceptor?: Interceptor<T>;
 }
 
 /**
@@ -38,7 +40,7 @@ export class Proxy<T extends object> implements Model<T> {
    * @param snapshot Snapshot to begin building the proxy model on.
    * @param config Optional configuration options.
    */
-  constructor(snapshot: Snapshot<T>, private config?: ProxyConfig) {
+  constructor(snapshot: Snapshot<T>, private config?: ProxyConfig<T>) {
     this.model = new Inner(snapshot, config ? config.sequentialIds : false);
     this.uncommittedCompletions = [];
     this.lastCommittedDocument = JSON.stringify(snapshot.document);
@@ -51,19 +53,22 @@ export class Proxy<T extends object> implements Model<T> {
     return this.model.getCommandCount();
   }
   public apply(command: Command): Result {
-    const result = this.model.apply(command);
-    if (result.isSuccess) {
-      // Only store successfully applied commands in delegates
+    const interception = this.config != undefined && this.config.interceptor != undefined ? 
+        this.config.interceptor.intercept(this.model.getDocument(), command) : 
+        undefined;
+    const resultWithCommand = applyCommandWithInterception(this.model, command, interception);
+    if (resultWithCommand.result.isSuccess) {
+      // Only store successfully applied commands in proxies
       this.uncommittedCompletions.push({
-        command,
-        createdId: result.createdId
+        command: resultWithCommand.modifiedCommand ? resultWithCommand.modifiedCommand : command,
+        createdId: resultWithCommand.result.createdId
       });
     } else {
       // If there's a risk that the failed command modified the model, we would want to
       // rebuild it from our last committed snapshot and uncommitted commands, but we
-      // don't yet have commands that can fail in that way
+      // don't yet have commands that can fail in that way yet
     }
-    return result;
+    return resultWithCommand.result;
   }
   /**
    * Returns a batch of currently uncommited changes and prepares the proxy for accepting

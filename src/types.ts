@@ -1,3 +1,5 @@
+import { InterfaceTypeAnnotation } from "@babel/types";
+
 export type Result =
   | { isSuccess: true; createdId?: string }
   | { isSuccess: false; error: string };
@@ -45,6 +47,26 @@ export interface Model<T extends object> {
   getDocument(): T;
   getCommandCount(): number;
   apply(command: Command, proposeCreateId?: string): Result;
+}
+
+/**
+ * Returned by interceptors to either indicate that a command should be rejected with the specified
+ * rejection message, or that the command should be applied with different props,
+ */
+export type CommandInterception = {
+    rejection: string;
+} | {
+    newProps: any;
+}
+
+export interface Interceptor<T extends object> {
+    /**
+     * Called before a command is applied to a model and allows rejecting the command or
+     * modifying its props. Returns undefined if the command should be applied as is.
+     * @param document The current version of the document, the interceptor must not modify the document.
+     * @param command The command that should be approved (return undefined), rejector or have its props modified.
+     */
+    intercept(document: T, command: Command): undefined | CommandInterception;
 }
 
 export interface Snapshot<T extends object> {
