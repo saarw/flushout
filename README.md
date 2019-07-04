@@ -11,12 +11,12 @@ Flushout design properties
 
 # How it works
 ## Document and snapshot
-A document in Flushout is a simple JavaScript object that may contain primitive fields or additional objects that form a tree graph. Applications modify the model by applying commands with changes they want to make. All commands include an action and allow specifying a path to where in the document graph the command should operate (omitting the path uses the root of the document). A snapshot is simply a document and a count of how many commands have been applied to the document.
+A document in Flushout is a simple JavaScript object that may contain primitive fields or additional objects fields to form a tree graph. Applications modify the model by applying commands. All commands include an action and allow specifying a path to where in the document graph the command should operate (omitting the path uses the root of the document). A **snapshot** is simply a document and a count of how many commands have been applied to the document.
 
 ## Client proxies
 Clients initialize a Proxy model with the latest snapshot from the backend. They then apply commands to modify the model any may periodically perform flushes to synchronize their state with the remote master.
 
-### Remote master
+## Remote master
 The server initialize a Master model with the latest snapshot and apply flushes it receives from the clients to update the model and produce sync messages that let the proxies update their state to that of the master.
 
 ### Commands   
@@ -26,7 +26,10 @@ The server initialize a Master model with the latest snapshot and apply flushes 
 
 **Delete** - Deletes the node in the document graph.   
 
-### Collisions
+#### History and undo
+The update history of the master and the changes flushed by the proxies are represented by batches of **command completions**. Each batch has a number indicating the command count of the document it was applied to and each command completion includes a command that was successfully applied and optionally its resulting ID (if it created a new node). This means each document can rebuilt from an earlier version by re-applying all command completions that occurred after the document's command count. Applications can implement full or limited undo functionality by preserving the necessary earlier document snapshots and command completions.
+
+#### Collisions
 * Updates to the same node will simply overwrite each other, but applications that preserve command history may be able to implement more advanced merge operations.
 * Updates on deleted nodes will fail silently.
 * If two proxies perform create commands that create a node with the same ID before flushing to the master, the flush will remap any queued up commands in the second proxy to the new node's ID and notify the application that IDs may have changed.
