@@ -5,7 +5,7 @@ import { HistoryProvider } from "./master";
 
 describe("Master", () => {
   test("apply batch with command to create", async () => {
-    const master = new Master<any>({ updateCount: 0, document: {} });
+    const master = new Master<any>({ commandCount: 0, document: {} });
     const batch: CompletionBatch = {
       completions: [
         {
@@ -19,7 +19,7 @@ describe("Master", () => {
     };
     const result = await master.apply(batch);
 
-    expect(master.getSnapshot().updateCount).toBe(1);
+    expect(master.getSnapshot().commandCount).toBe(1);
     expect(result.sync).toBeUndefined();
     expect(result.errors).toBeUndefined();
     expect(master.getSnapshot().document["1"]).toBeDefined();
@@ -27,7 +27,7 @@ describe("Master", () => {
 
   test("apply two batches that both perform the same create", () => {
     const master = new Master<any>(
-      { updateCount: 0, document: {} },
+      { commandCount: 0, document: {} },
       { sequentialIds: true }
     );
     const batch: CompletionBatch = {
@@ -44,13 +44,13 @@ describe("Master", () => {
     master.apply(batch);
     master.apply(batch);
 
-    expect(master.getSnapshot().updateCount).toBe(2);
+    expect(master.getSnapshot().commandCount).toBe(2);
     expect(master.getSnapshot().document["1"]).toBeDefined();
     expect(master.getSnapshot().document["3"]).toBeDefined();
   });
 
   test("merge two add commands without history produces full sync", async () => {
-    const master = new Master({ updateCount: 0, document: {} });
+    const master = new Master({ commandCount: 0, document: {} });
     const batch: CompletionBatch = {
       completions: [
         {
@@ -75,7 +75,7 @@ describe("Master", () => {
   test("merge two add commands with history produces partial sync", async () => {
     const historyStore: HistoryProvider & any = createHistoryStore();
     const master = new Master(
-      { updateCount: 0, document: {} },
+      { commandCount: 0, document: {} },
       { historyProvider: historyStore }
     );
     const batch: CompletionBatch = {

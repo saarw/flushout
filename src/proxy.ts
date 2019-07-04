@@ -42,13 +42,13 @@ export class Proxy<T extends object> implements Model<T> {
     this.model = new Inner(snapshot, config ? config.sequentialIds : false);
     this.uncommittedCompletions = [];
     this.lastCommittedDocument = JSON.stringify(snapshot.document);
-    this.lastCommittedUpdateCount = snapshot.updateCount;
+    this.lastCommittedUpdateCount = snapshot.commandCount;
   }
   public getDocument(): T {
     return this.model.getDocument();
   }
-  public getUpdateCount(): number {
-    return this.model.getUpdateCount();
+  public getCommandCount(): number {
+    return this.model.getCommandCount();
   }
   public apply(command: Command): Result {
     const result = this.model.apply(command);
@@ -75,7 +75,7 @@ export class Proxy<T extends object> implements Model<T> {
       throw Error("Flush already in progress");
     }
     this.nextCommittedDocument = JSON.stringify(this.model.getDocument());
-    this.nextCommittedUpdateCount = this.model.getUpdateCount();
+    this.nextCommittedUpdateCount = this.model.getCommandCount();
     const batch: CompletionBatch = {
       from: this.lastCommittedUpdateCount,
       completions: this.uncommittedCompletions
@@ -136,7 +136,7 @@ export class Proxy<T extends object> implements Model<T> {
         idsChanged = true;
       }
       this.lastCommittedDocument = JSON.stringify(this.model.getDocument());
-      this.lastCommittedUpdateCount = this.model.getUpdateCount();
+      this.lastCommittedUpdateCount = this.model.getCommandCount();
       const uncommittedApplied = applyCompletions(
         this.model,
         this.uncommittedCompletions,
@@ -158,7 +158,7 @@ export class Proxy<T extends object> implements Model<T> {
     if (this.lastCommittedUpdateCount === diff.from) {
       this.model = new Inner(
         {
-          updateCount: this.lastCommittedUpdateCount,
+          commandCount: this.lastCommittedUpdateCount,
           document: JSON.parse(this.lastCommittedDocument)
         },
         this.config ? this.config.sequentialIds : false

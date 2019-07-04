@@ -8,7 +8,7 @@ describe("Inner", () => {
     const result = model.apply({
       action: CommandAction.Create
     });
-    expect(model.getUpdateCount()).toBe(1);
+    expect(model.getCommandCount()).toBe(1);
     if (result.isSuccess === false) {
       fail();
       return;
@@ -22,7 +22,7 @@ describe("Inner", () => {
       action: CommandAction.Create,
       props: { p1: "aValue" }
     });
-    expect(model.getUpdateCount()).toBe(1);
+    expect(model.getCommandCount()).toBe(1);
     if (result.isSuccess === false) {
       fail();
       return;
@@ -38,7 +38,7 @@ describe("Inner", () => {
       },
       "myId"
     );
-    expect(model.getUpdateCount()).toBe(1);
+    expect(model.getCommandCount()).toBe(1);
     const field = "myId";
     expect(model.getDocument()[field]).toEqual({});
   });
@@ -56,7 +56,7 @@ describe("Inner", () => {
       },
       "myId"
     );
-    expect(model.getUpdateCount()).toBe(1);
+    expect(model.getCommandCount()).toBe(1);
     expect(result.isSuccess && result.createdId).toBeTruthy();
     expect(result.isSuccess && result.createdId).not.toBe("myId");
   });
@@ -78,7 +78,7 @@ describe("Inner", () => {
       }
     });
 
-    expect(model.getUpdateCount()).toBe(2);
+    expect(model.getCommandCount()).toBe(2);
     expect(model.getDocument()[result.createdId!].p1).toBe("aValue");
   });
 
@@ -95,7 +95,7 @@ describe("Inner", () => {
       action: CommandAction.Delete,
       path: [result.createdId!]
     });
-    expect(model.getUpdateCount()).toBe(2);
+    expect(model.getCommandCount()).toBe(2);
     expect(model.getDocument()[result.createdId!]).toBe(undefined);
   });
 
@@ -124,7 +124,7 @@ describe("Inner", () => {
       action: CommandAction.Delete,
       path: [result.createdId!, result2.createdId!]
     });
-    expect(model.getUpdateCount()).toBe(4);
+    expect(model.getCommandCount()).toBe(4);
     expect(model.getDocument()[result.createdId!][result2.createdId!]).toBe(
       undefined
     );

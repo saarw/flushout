@@ -7,21 +7,21 @@ describe("Integration", () => {
   test("multiple proxies create tree with same root ID, without history store", async () => {
     const proxyA = new Proxy(
       {
-        updateCount: 0,
+        commandCount: 0,
         document: {}
       },
       { sequentialIds: true }
     );
     const proxyB = new Proxy(
       {
-        updateCount: 0,
+        commandCount: 0,
         document: {}
       },
       { sequentialIds: true }
     );
     const master = new Master(
       {
-        updateCount: 0,
+        commandCount: 0,
         document: {}
       },
       { sequentialIds: true }
@@ -88,8 +88,8 @@ describe("Integration", () => {
     proxyA.endFlush(applyResA2.sync);
     proxyB.endFlush(applyResB2.sync);
 
-    expect(proxyA.getUpdateCount()).toBe(4);
-    expect(proxyA.getUpdateCount()).toBe(proxyB.getUpdateCount());
+    expect(proxyA.getCommandCount()).toBe(4);
+    expect(proxyA.getCommandCount()).toBe(proxyB.getCommandCount());
     expect(proxyA.getDocument()).toStrictEqual(proxyB.getDocument());
   });
 
@@ -97,21 +97,21 @@ describe("Integration", () => {
     const historyStore: HistoryProvider & any = createHistoryStore();
     const proxyA = new Proxy(
       {
-        updateCount: 0,
+        commandCount: 0,
         document: {}
       },
       { sequentialIds: true }
     );
     const proxyB = new Proxy(
       {
-        updateCount: 0,
+        commandCount: 0,
         document: {}
       },
       { sequentialIds: true }
     );
     const master = new Master(
       {
-        updateCount: 0,
+        commandCount: 0,
         document: {}
       },
       { historyProvider: historyStore, sequentialIds: true }
@@ -182,8 +182,8 @@ describe("Integration", () => {
     proxyA.endFlush(applyResA2.sync);
     proxyB.endFlush(applyResB2.sync);
 
-    expect(proxyA.getUpdateCount()).toBe(4);
-    expect(proxyA.getUpdateCount()).toBe(proxyB.getUpdateCount());
+    expect(proxyA.getCommandCount()).toBe(4);
+    expect(proxyA.getCommandCount()).toBe(proxyB.getCommandCount());
     expect(proxyA.getDocument()).toStrictEqual(proxyB.getDocument());
   });
 });

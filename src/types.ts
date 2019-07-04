@@ -43,12 +43,12 @@ export interface CompletionBatch {
 
 export interface Model<T extends object> {
   getDocument(): T;
-  getUpdateCount(): number;
+  getCommandCount(): number;
   apply(command: Command, proposeCreateId?: string): Result;
 }
 
 export interface Snapshot<T extends object> {
-  updateCount: number;
+  commandCount: number;
   document: T;
 }
 

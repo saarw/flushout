@@ -12,7 +12,7 @@ export function applyCompletions(
   completions: CommandCompletion[],
   pathMapper: PathMapper
 ): undefined | { applied: CompletionBatch; errors?: CompletionError[] } {
-  const startUpdate = model.getUpdateCount();
+  const startUpdate = model.getCommandCount();
   let modifiedBatch: CommandCompletion[] | undefined;
   let errors: CompletionError[] | undefined;
   completions.forEach((c, idx) => {

@@ -43,7 +43,7 @@ export class Master<T extends object> {
 
   public getSnapshot(): Snapshot<T> {
     return {
-      updateCount: this.model.getUpdateCount(),
+      commandCount: this.model.getCommandCount(),
       document: this.model.getDocument()
     };
   }
@@ -58,7 +58,7 @@ export class Master<T extends object> {
    * @param batch
    */
   public async apply(batch: CompletionBatch): Promise<ApplyResult<T>> {
-    const startUpdate = this.model.getUpdateCount();
+    const startUpdate = this.model.getCommandCount();
 
     const pathMapper = new PathMapper();
     const result = applyCompletions(this.model, batch.completions, pathMapper);

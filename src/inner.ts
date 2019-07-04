@@ -6,16 +6,16 @@ export class Inner<T extends object> implements Model<T> {
     private sequentialIds: boolean
   ) {
     if (
-      (snapshotOrDocument as Snapshot<T>).updateCount != undefined &&
+      (snapshotOrDocument as Snapshot<T>).commandCount != undefined &&
       (snapshotOrDocument as Snapshot<T>).document != undefined
     ) {
       this.snapshot = snapshotOrDocument as Snapshot<T>;
     } else {
-      this.snapshot = { updateCount: 0, document: snapshotOrDocument as T };
+      this.snapshot = { commandCount: 0, document: snapshotOrDocument as T };
     }
   }
-  public getUpdateCount(): number {
-    return this.snapshot.updateCount;
+  public getCommandCount(): number {
+    return this.snapshot.commandCount;
   }
   public getDocument(): T {
     return this.snapshot.document;
@@ -40,7 +40,7 @@ export class Inner<T extends object> implements Model<T> {
             command.props != undefined
               ? JSON.parse(JSON.stringify(command.props))
               : {};
-          this.snapshot.updateCount += 1;
+          this.snapshot.commandCount += 1;
           return {
             isSuccess: true,
             createdId: newId
@@ -62,7 +62,7 @@ export class Inner<T extends object> implements Model<T> {
               result.node[key] = copy[key];
             });
           }
-          this.snapshot.updateCount += 1;
+          this.snapshot.commandCount += 1;
           return {
             isSuccess: true
           };
@@ -76,7 +76,7 @@ export class Inner<T extends object> implements Model<T> {
         const result = this.navigateToNode(path.slice(0, path.length - 1));
         if (result.found) {
           delete result.node[path[path.length - 1]];
-          this.snapshot.updateCount += 1;
+          this.snapshot.commandCount += 1;
           return {
             isSuccess: true
           };
@@ -114,7 +114,7 @@ export class Inner<T extends object> implements Model<T> {
 
   private generateNewId(attempt: number): string {
     if (this.sequentialIds) {
-      return (this.snapshot.updateCount + 1 + attempt).toString();
+      return (this.snapshot.commandCount + 1 + attempt).toString();
     } else {
       return Math.round(Math.random() * Number.MAX_SAFE_INTEGER).toString();
     }
