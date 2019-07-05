@@ -25,13 +25,13 @@ All commands include an action and allow specifying a path to where in the docum
 **Update** - Updates an object field in the document graph by setting the values specified in the command's props object.   
 **Delete** - Deletes the object in the document graph.   
 
-## Interceptor
+### Interceptor
 Both client and master can be initialized with an Interceptor function that can validate and modify commands before they are applied to the model. This provides for security and can help resolve certain conflicts.
 
-#### History and undo
+### History and undo
 The update history of the master and the changes flushed by the proxies are represented by batches of **command completions**. Each batch has a number indicating the command count of the document it was applied to and each command completion includes a command that was successfully applied and optionally its resulting ID (if it created a new node). This means each document can rebuilt from an earlier version by re-applying all command completions that occurred after the document's command count. Applications can implement full or limited undo functionality by preserving the necessary earlier document snapshots and command completions.
 
-#### Collisions
+### Collisions
 * Updates to the same node will simply overwrite each other, but applications that preserve command history may be able to implement more advanced merge operations.
 * Updates on deleted nodes will fail silently.
 * If two proxies perform create commands that create a node with the same ID before flushing to the master, the flush will remap any queued up commands in the second proxy to the new node's ID and notify the application that IDs may have changed.
