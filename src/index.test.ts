@@ -82,8 +82,8 @@ describe("Integration", () => {
 
     const batchB2 = proxyB.beginFlush();
     const applyResB2 = await master.apply(batchB2);
-
     const applyResA2 = await master.apply(batchA2);
+
 
     proxyA.endFlush(applyResA2.sync);
     proxyB.endFlush(applyResB2.sync);

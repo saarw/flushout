@@ -1,6 +1,4 @@
-import { Inner } from "./inner";
-
-import { Master, CompletionBatch, CommandAction, CommandCompletion } from ".";
+import { Master, CompletionBatch, CommandAction, CommandCompletion, Command } from ".";
 import { HistoryProvider } from "./master";
 
 describe("Master", () => {
@@ -25,6 +23,26 @@ describe("Master", () => {
     expect(master.getSnapshot().document["1"]).toBeDefined();
   });
 
+  test("create in tree", async () => {
+    const master = new Master<any>({commandCount:3,document:{"1":{"branchA":{"2":{"childOf":"a"}}},"4":{"branchB":{}}}});
+    const batch: CompletionBatch = {
+      completions: [
+        {
+          command: {
+            path: ["4","branchB"],
+            action: CommandAction.Create,
+            props: {"childOf":"b"}
+          },
+          createdId: "2"
+        }
+      ],
+      from: 3
+    };
+    const result = await master.apply(batch);
+    expect(master.getSnapshot().commandCount).toBe(4);
+    expect(Object.keys(master.getSnapshot().document['4'].branchB).length).toBe(1);
+  });
+
   test("apply two batches that both perform the same create", () => {
     const master = new Master<any>(
       { commandCount: 0, document: {} },
@@ -47,6 +65,74 @@ describe("Master", () => {
     expect(master.getSnapshot().commandCount).toBe(2);
     expect(master.getSnapshot().document["1"]).toBeDefined();
     expect(master.getSnapshot().document["3"]).toBeDefined();
+  });
+
+  test("interceptor modifies prop without history produces partial sync", async () => {
+    const master = new Master({ commandCount: 0, document: {} }, {
+      interceptor: (document: any, command: Command) => {
+        return {
+          newProps: {
+            field: 'b'
+          }
+        };
+      }
+    });
+    const batch: CompletionBatch = {
+      completions: [
+        {
+          command: {
+            action: CommandAction.Create,
+            props: {
+              field: 'a'
+            }
+          },
+          createdId: "1"
+        }
+      ],
+      from: 0
+    };
+    const result = await master.apply(batch);
+
+    if (result.sync == undefined) {
+      fail();
+      return;
+    }
+    expect(result.sync.isPartial).toBe(true);
+  });
+
+  test("interceptor modifies prop with history produces partial sync", async () => {
+    const historyStore = createHistoryStore();
+    const master = new Master({ commandCount: 0, document: {} }, {
+      historyProvider: historyStore.createProvider(),
+      interceptor: (document: any, command: Command) => {
+        return {
+          newProps: {
+            field: 'b'
+          }
+        };
+      }
+    });
+    const batch: CompletionBatch = {
+      completions: [
+        {
+          command: {
+            action: CommandAction.Create,
+            props: {
+              field: 'a'
+            }
+          },
+          createdId: "1"
+        }
+      ],
+      from: 0
+    };
+    const result = await master.apply(batch);
+
+    if (result.sync == undefined) {
+      fail();
+      return;
+    }
+    expect(result.sync.isPartial).toBe(true);
   });
 
   test("merge two add commands without history produces full sync", async () => {

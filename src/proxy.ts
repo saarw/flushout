@@ -140,7 +140,7 @@ export class Proxy<T extends object> implements Model<T> {
         idsChanged = sync.mappedPaths != undefined;
       } else {
         this.model = new Inner(
-          sync.latest,
+          JSON.parse(JSON.stringify(sync.latest)),
           this.config && this.config.sequentialIds != undefined ? this.config.sequentialIds : false
         );
         idsChanged = true;

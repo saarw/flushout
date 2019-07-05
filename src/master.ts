@@ -66,6 +66,7 @@ export class Master<T extends object> {
 
     const pathMapper = new PathMapper();
     const result = applyCompletions(this.model, batch.completions, pathMapper, this.interceptor);
+    const needsSync = batch.from !== startUpdate || result != undefined;
     const applied: CompletionBatch = {
       from: startUpdate,
       completions:
@@ -73,14 +74,17 @@ export class Master<T extends object> {
     };
 
     let sync: Sync<T> | undefined;
-    if (batch.from !== startUpdate) {
-      const historyDiff = this.historyProvider
+    if (needsSync) {
+      const needsHistory = batch.from !== startUpdate;
+      let historyDiff;
+      if (needsHistory) {
+        historyDiff =  this.historyProvider
         ? await this.historyProvider(batch.from, startUpdate)
         : undefined;
-      if (
-        historyDiff == undefined ||
-        historyDiff.length !== startUpdate - batch.from
-      ) {
+      }
+      if (needsHistory && 
+            (historyDiff == undefined || 
+                historyDiff.length !== startUpdate - batch.from)) {
         sync = {
           isPartial: false,
           mappedPaths: pathMapper.getMappings(),
@@ -89,7 +93,9 @@ export class Master<T extends object> {
       } else {
         const diff: CompletionBatch = {
           from: batch.from,
-          completions: historyDiff.concat(applied.completions)
+          completions: historyDiff ? 
+            historyDiff.concat(applied.completions) : 
+            applied.completions
         };
         sync = {
           isPartial: true,
