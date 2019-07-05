@@ -1,5 +1,5 @@
 # flushout
-Flushout is a distributed data model based on event-sourcing written in TypeScript to support single-page applications, progressive web applications, and mobile clients that need to interact with data models without network delay and support offline processing. Clients interact with a local proxy of a remote master model and can flush changes in the background to the master model for reconciliation. 
+Flushout is a distributed data model based on event-sourcing written in TypeScript to support single-page applications and mobile clients that need to interact with data models without network delay and support offline processing. Clients interact with a local proxy of a remote master model and can flush changes to the master model for reconciliation at their convenience. 
 
 Flushout design properties
 * Minimizes network traffic by only initializing clients with the latest model snapshot and then only send updates
@@ -10,7 +10,7 @@ Flushout design properties
 
 # How it works
 ## Document and snapshot
-A document in Flushout is a simple JavaScript object that may contain primitive fields or additional object fields to form a tree graph. Applications modify the model by applying commands. All commands include an action and allow specifying a path to where in the document graph the command should operate (omitting the path uses the root of the document). A **snapshot** is simply a document and a count of how many commands have been applied to the document.
+A document in Flushout is a simple JavaScript object that may contain primitive fields or additional object fields to form a tree graph. Applications modify the model by applying commands. A **snapshot** is simply a document and a count of how many commands have been applied to the document.
 
 ## Client proxies
 Clients initialize a Proxy model with the latest snapshot from the backend. They then apply commands to modify the model any may periodically perform flushes to synchronize their state with the remote master.
@@ -19,6 +19,7 @@ Clients initialize a Proxy model with the latest snapshot from the backend. They
 The server initialize a Master model with the latest snapshot and apply flushes it receives from the clients to update the model and produce sync messages that let the proxies update their state to that of the master.
 
 ### Commands   
+All commands include an action and allow specifying a path to where in the document graph the command should operate (omitting the path uses the root of the document).   
 **Create** - Creates a new object field inside an object in the document graph, optionally initializing the object with the values in the command's props object. The field will receive a random ID and the ID is returned to the application.   
 
 **Update** - Updates an object field in the document graph by setting the values specified in the command's props object.   
@@ -35,10 +36,15 @@ The update history of the master and the changes flushed by the proxies are repr
 * Updates on deleted nodes will fail silently.
 * If two proxies perform create commands that create a node with the same ID before flushing to the master, the flush will remap any queued up commands in the second proxy to the new node's ID and notify the application that IDs may have changed.
 
+### Usage notes and error handling
+To offer as good performance as possible for Node's single-threaded event loop Flushout tries to avoid excessive copying and serialization on the Master. This means you should be careful not to modify objects that have been passed in to Flushout.   
+
+Clients can recover from Flush errors by cancelling their flush and trying again, but this may result in duplicate updates to the Master if the error happened when a successful flush response was being sent by the master. You can add code to track each client's latest command number for deduplication. Otherwise, fatal errors in the client can be recovered by discarding the proxy and reinitiating with the latest snapshot from the server.
+
 ## Background
-Flushout was built to support https://plotdash.com to offer a Google Docs-like experience where data model is always immediately responsive to the user while remote synchronization happens in the background. Flushout was also developed to fit TypeScript as a full-stack language, allowing productive code sharing between clients and server while recognizing the importance of server-side performance due to Node's single-threaded event loop. 
+Flushout was built to support https://plotdash.com to offer a Google Docs-like experience where data model is always immediately responsive to the user while remote synchronization happens in the background. Flushout was developed to fit systems that use TypeScript as a full-stack language, exploiting the ease of sharing code between clients and server while recognizing the importance of server-side performance due to Node's single-threaded event loop. 
 
 ## Differences to CRDT-based libraries
-CRDT-based libraries, such as Automerge, is another attractive option for this kind of application, but Flushout may be more practical if the application does not need all the features provided by CRDTs.    
+CRDT-based libraries, such as Automerge, is another attractive option for this kind of application, but Flushout may be more practical if the application does not need all their features.    
 
-CRDTs tend to embed update history in the document which may cause slower initial load times for clients, higher memory usage, and more serialization work and traffic to the database. Flushout's simpler operations defined as easily interceptable interfaces may make it easier to support validation, security, and model-based limitations on commands. It may also be possible to implement CRDT types on top of Flushout's primitives, or directly embed a CRDT-based document as part of Flushout model.
+CRDTs tend to embed update history in the document which may cause slower initial load times for clients, higher memory usage, and more serialization work and traffic to the database. Flushout's simpler operations may make it easier to support validation, security, and model-based limitations on commands. Interceptors also make it possible to implement CRDT-like functionality on top of Flushout's primitives (one can even embed a CRDT-based documents as part of Flushout model).
