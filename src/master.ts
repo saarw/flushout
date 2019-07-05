@@ -23,12 +23,13 @@ export interface MasterConfig<T extends object> {
   sequentialIds?: boolean; // used for testing
 }
 
-export interface HistoryProvider {
-  /**
-   * Returns the history from the specified command count, if available, otherwise undefined
-   */
-  (from: number, to: number): Promise<CommandCompletion[] | undefined>;
-}
+/**
+ * Returns the command history between the specified command counts, if available, otherwise returns undefined
+ */
+export type HistoryProvider = (
+  from: number,
+  to: number
+) => Promise<CommandCompletion[] | undefined>;
 
 /**
  * Updates the master model and responds to flush batches, providing diffs from an optional
@@ -65,7 +66,12 @@ export class Master<T extends object> {
     const startUpdate = this.model.getCommandCount();
 
     const pathMapper = new PathMapper();
-    const result = applyCompletions(this.model, batch.completions, pathMapper, this.interceptor);
+    const result = applyCompletions(
+      this.model,
+      batch.completions,
+      pathMapper,
+      this.interceptor
+    );
     const needsSync = batch.from !== startUpdate || result != undefined;
     const applied: CompletionBatch = {
       from: startUpdate,
@@ -78,13 +84,15 @@ export class Master<T extends object> {
       const needsHistory = batch.from !== startUpdate;
       let historyDiff;
       if (needsHistory) {
-        historyDiff =  this.historyProvider
-        ? await this.historyProvider(batch.from, startUpdate)
-        : undefined;
+        historyDiff = this.historyProvider
+          ? await this.historyProvider(batch.from, startUpdate)
+          : undefined;
       }
-      if (needsHistory && 
-            (historyDiff == undefined || 
-                historyDiff.length !== startUpdate - batch.from)) {
+      if (
+        needsHistory &&
+        (historyDiff == undefined ||
+          historyDiff.length !== startUpdate - batch.from)
+      ) {
         sync = {
           isPartial: false,
           mappedPaths: pathMapper.getMappings(),
@@ -93,9 +101,9 @@ export class Master<T extends object> {
       } else {
         const diff: CompletionBatch = {
           from: batch.from,
-          completions: historyDiff ? 
-            historyDiff.concat(applied.completions) : 
-            applied.completions
+          completions: historyDiff
+            ? historyDiff.concat(applied.completions)
+            : applied.completions
         };
         sync = {
           isPartial: true,

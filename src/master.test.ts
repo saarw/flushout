@@ -194,8 +194,8 @@ describe("Master", () => {
 });
 
 export function createHistoryStore(): { 
-  createProvider(): HistoryProvider,
   history: CommandCompletion[];
+  createProvider(): HistoryProvider,
   store(from: number, completions: CommandCompletion[]): Promise<void>;
 } {
   return {
