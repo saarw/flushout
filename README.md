@@ -13,10 +13,10 @@ Flushout design properties
 A document in Flushout is a simple JavaScript object that may contain primitive fields or additional object fields to form a tree graph. Applications modify the model by applying commands. A **snapshot** is simply a document and a count of how many commands have been applied to the document.
 
 ## Client proxies
-Clients initialize a Proxy model with the latest snapshot from the backend. They then apply commands to modify the model any may periodically perform flushes to synchronize their state with the remote master.
+Clients initialize a Proxy model with the latest snapshot from the backend. Clients then apply commands to modify the model and may periodically perform flush operations to synchronize their state with the remote master.
 
 ## Remote master
-The server initialize a Master model with the latest snapshot and apply flushes it receives from the clients to update the model and produce sync messages that let the proxies update their state to that of the master.
+The server initialize a Master model with the latest snapshot and apply flushed batches it receives from the client proxies to update the model and produce synchronization responses that let the proxies update to the same state as the master.
 
 ### Commands   
 All commands include an action and allow specifying a path to where in the document graph the command should operate (omitting the path uses the root of the document).   
