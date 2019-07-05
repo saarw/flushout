@@ -1,4 +1,4 @@
-import { Master, CompletionBatch, CommandAction, CommandCompletion, Command } from ".";
+import { Master, CompletionBatch, CommandAction, CommandCompletion, Command, CommandInterception } from ".";
 import { HistoryProvider } from "./master";
 
 describe("Master", () => {
@@ -70,11 +70,12 @@ describe("Master", () => {
   test("interceptor modifies prop without history produces partial sync", async () => {
     const master = new Master({ commandCount: 0, document: {} }, {
       interceptor: (document: any, command: Command) => {
-        return {
-          newProps: {
+        const interception = {
+          newProps:  {
             field: 'b'
           }
         };
+        return interception;
       }
     });
     const batch: CompletionBatch = {
@@ -105,11 +106,12 @@ describe("Master", () => {
     const master = new Master({ commandCount: 0, document: {} }, {
       historyProvider: historyStore.createProvider(),
       interceptor: (document: any, command: Command) => {
-        return {
-          newProps: {
+        const interception = {
+          newProps:  {
             field: 'b'
-          }
+          } as object
         };
+        return interception;
       }
     });
     const batch: CompletionBatch = {

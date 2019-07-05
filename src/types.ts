@@ -27,14 +27,22 @@ export enum CommandAction {
   Update = "update",
   Delete = "detete"
 }
-export interface Command {
-  path?: string[];
-  action: CommandAction;
-  props?: Record<string, any>;
-}
+
+export type Command<Props extends object = any> = { path?: string[] } & (
+    {
+        action: CommandAction.Create;
+        props?: Props;
+    } |
+    {
+        action: CommandAction.Update;
+        props?: Partial<Props>;
+    } |
+    {
+        action: CommandAction.Delete;
+    })
 
 export interface CommandCompletion {
-  command: Command;
+  command: Command<any>;
   createdId?: string;
 }
 

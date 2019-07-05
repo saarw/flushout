@@ -48,7 +48,7 @@ export class Inner<T extends object> implements Model<T> {
         }
         return {
           isSuccess: false,
-          error: "No object at path  " + result.errorPath.toString()
+          error: 'No object at document path ' + result.errorPath.toString()
         };
       }
       case CommandAction.Update: {
@@ -69,7 +69,7 @@ export class Inner<T extends object> implements Model<T> {
         }
         return {
           isSuccess: false,
-          error: "No object at path " + result.errorPath.toString()
+          error: 'No object at document path ' + result.errorPath.toString()
         };
       }
       case CommandAction.Delete: {
@@ -83,11 +83,16 @@ export class Inner<T extends object> implements Model<T> {
         }
         return {
           isSuccess: false,
-          error: "No object at path " + result.errorPath.toString()
+          error: 'No object at document path ' + result.errorPath.toString()
         };
       }
       default: {
-        throw new Error("Unknown action " + command.action);
+        // never supposed to end up here
+        console.log('Unknown action in command ' + JSON.stringify(command));
+        return {
+            isSuccess: false,
+            error: 'Unknown command'
+        };
       }
     }
   }
@@ -105,7 +110,7 @@ export class Inner<T extends object> implements Model<T> {
     let n: any = this.snapshot.document;
     for (let i = 0; i < path.length; i++) {
       n = n[path[i]];
-      if (typeof n !== "object") {
+      if (typeof n !== 'object') {
         return { found: false, errorPath: path.slice(0, i + 1) };
       }
     }

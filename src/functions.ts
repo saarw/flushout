@@ -6,7 +6,8 @@ import {
   CompletionError,
   Model,
   Interceptor,
-  Result
+  Result,
+  CommandAction
 } from "./types";
 import { PathMapper } from "./path-mapper";
 
@@ -22,13 +23,11 @@ export function applyCompletions<T extends object>(
   completions.forEach((c, idx) => {
     let path = c.command.path || [];
     const mapped = pathMapper.get(path);
-    let command: Command = mapped
-      ? {
-          path: mapped,
-          action: c.command.action,
-          props: c.command.props
-        }
-      : c.command;
+    let command: Command = c.command;
+    if (mapped != undefined) {
+        const {path, ...restOfCommand} = c.command;
+        command = { path: mapped, ...restOfCommand };
+    } 
     path = mapped || path;
     const interception = intercept ? intercept(model.getDocument(), command) : undefined;
     let isModified = mapped != undefined || interception != undefined;
@@ -79,23 +78,33 @@ export function applyCompletions<T extends object>(
   }
 }
 
-export function applyCommandWithInterception<T extends object>(model: Model<T>, 
-    command: Command, 
+export function applyCommandWithInterception<T extends object, P extends object>(model: Model<T>, 
+    command: Command<P>, 
     interception?: CommandInterception,
     proposedCreateId?: string): {
         result: Result,
-        modifiedCommand?: Command // set if interception wasn't rejection
+        modifiedCommand?: Command<P> // set if interception wasn't rejection
     } {
     if (interception == undefined) {
         return {
             result: model.apply(command, proposedCreateId)
         };
-    } else if ((interception as {newProps: any}).newProps != undefined) {
-        const c = {
-            path: command.path,
-            action: command.action,
-            props: (interception as {newProps: any}).newProps
-        };
+    } else if (command.action !== CommandAction.Delete &&
+        (interception as {newProps: any}).newProps != undefined) {
+        let c: Command<P>;
+        if (command.action === CommandAction.Create) {
+            c = {
+                path: command.path,
+                action: command.action,
+                props: (interception as {newProps: P}).newProps
+            }
+        } else {
+            c = {
+                path: command.path,
+                action: command.action,
+                props: (interception as {newProps: Partial<P>}).newProps
+            }
+        }
         return {
             result: model.apply(c, proposedCreateId),
             modifiedCommand: c

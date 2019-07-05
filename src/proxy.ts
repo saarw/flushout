@@ -20,7 +20,7 @@ export interface FlushResult {
 
 export interface ProxyConfig<T extends object> {
   sequentialIds?: boolean;
-  intercept?: Interceptor<T>;
+  interceptor?: Interceptor<T>;
 }
 
 /**
@@ -53,8 +53,8 @@ export class Proxy<T extends object> implements Model<T> {
     return this.model.getCommandCount();
   }
   public apply(command: Command): Result {
-    const interception = this.config != undefined && this.config.intercept != undefined ? 
-        this.config.intercept(this.model.getDocument(), command) : 
+    const interception = this.config != undefined && this.config.interceptor != undefined ? 
+        this.config.interceptor(this.model.getDocument(), command) : 
         undefined;
     const resultWithCommand = applyCommandWithInterception(this.model, command, interception);
     if (resultWithCommand.result.isSuccess) {
