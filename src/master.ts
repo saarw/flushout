@@ -17,9 +17,9 @@ export interface ApplyResult<T extends object> {
   errors?: CompletionError[];
 }
 
-export interface MasterConfig<T extends object> {
+export interface MasterConfig<T extends object, C> {
   historyProvider?: HistoryProvider;
-  interceptor?: Interceptor<T>;
+  interceptor?: Interceptor<T, C>;
   sequentialIds?: boolean; // used for testing
 }
 
@@ -35,12 +35,12 @@ export type HistoryProvider = (
  * Updates the master model and responds to flush batches, providing diffs from an optional
  * history provider.
  */
-export class Master<T extends object> {
+export class Master<T extends object, C = unknown> {
   private readonly historyProvider?: HistoryProvider;
   private readonly model: Model<T>;
-  private readonly interceptor?: Interceptor<T>;
+  private readonly interceptor?: Interceptor<T, C>;
 
-  constructor(snapshot: Snapshot<T>, config?: MasterConfig<T>) {
+  constructor(snapshot: Snapshot<T>, config?: MasterConfig<T, C>) {
     this.model = new Inner(snapshot, config ? !!config.sequentialIds : false);
     this.historyProvider = config ? config.historyProvider : undefined;
     this.interceptor = config ? config.interceptor : undefined;
@@ -62,7 +62,7 @@ export class Master<T extends object> {
    * from the batch's update count to the master's current state.
    * @param batch
    */
-  public async apply(batch: CompletionBatch): Promise<ApplyResult<T>> {
+  public async apply(batch: CompletionBatch, context?: C): Promise<ApplyResult<T>> {
     const startUpdate = this.model.getCommandCount();
 
     const pathMapper = new PathMapper();
@@ -70,7 +70,8 @@ export class Master<T extends object> {
       this.model,
       batch.completions,
       pathMapper,
-      this.interceptor
+      this.interceptor,
+      context
     );
     const needsSync = batch.from !== startUpdate || result != undefined;
     const applied: CompletionBatch = {

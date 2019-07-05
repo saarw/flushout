@@ -74,10 +74,13 @@ export type CommandInterception =
  * modifying its props. Returns undefined if the command should be applied as is.
  * @param document The current version of the document, the interceptor must not modify the document.
  * @param command The command that should be approved (return undefined), rejector or have its props modified.
+ * @param batchContext An optional context that can be passed in with every batch the master model applies to 
+ * provide info about user settings etc.
  */
-export type Interceptor<T extends object> = (
+export type Interceptor<T extends object, C> = (
   document: T,
-  command: Command
+  command: Command,
+  batchContext?: C
 ) => undefined | CommandInterception;
 
 export interface Snapshot<T extends object> {

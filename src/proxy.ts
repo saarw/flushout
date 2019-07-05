@@ -20,7 +20,7 @@ export interface FlushResult {
 
 export interface ProxyConfig<T extends object> {
   sequentialIds?: boolean;
-  interceptor?: Interceptor<T>;
+  interceptor?: Interceptor<T, any>;
 }
 
 /**
@@ -150,7 +150,8 @@ export class Proxy<T extends object> implements Model<T> {
       const uncommittedApplied = applyCompletions(
         this.model,
         this.uncommittedCompletions,
-        new PathMapper(sync.mappedPaths)
+        new PathMapper(sync.mappedPaths),
+        undefined
       );
       if (uncommittedApplied) {
         idsChanged = true;
@@ -176,7 +177,8 @@ export class Proxy<T extends object> implements Model<T> {
       const diffApplied = applyCompletions(
         this.model,
         diff.completions,
-        new PathMapper()
+        new PathMapper(),
+        undefined
       );
       if (diffApplied && diffApplied.errors) {
         return "Errors when applying diff on previous model";

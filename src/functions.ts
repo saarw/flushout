@@ -11,11 +11,12 @@ import {
 } from "./types";
 import { PathMapper } from "./path-mapper";
 
-export function applyCompletions<T extends object>(
+export function applyCompletions<T extends object, C>(
   model: Model<T>,
   completions: CommandCompletion[],
   pathMapper: PathMapper,
-  intercept?: Interceptor<T>
+  intercept: Interceptor<T, C> | undefined,
+  context?: C
 ): undefined | { applied: CompletionBatch; errors?: CompletionError[] } {
   const startUpdate = model.getCommandCount();
   let modifiedBatch: CommandCompletion[] | undefined;
@@ -29,7 +30,7 @@ export function applyCompletions<T extends object>(
         command = { path: mapped, ...restOfCommand };
     } 
     path = mapped || path;
-    const interception = intercept ? intercept(model.getDocument(), command) : undefined;
+    const interception = intercept ? intercept(model.getDocument(), command, context) : undefined;
     let isModified = mapped != undefined || interception != undefined;
     const resultWithCommand = applyCommandWithInterception(model, command, interception, c.createdId);
     const result: Result = resultWithCommand.result 
