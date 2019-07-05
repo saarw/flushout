@@ -1,6 +1,5 @@
 # flushout
-Flushout is an event-sourcing based data model where clients interact with a local proxy of a remote master
-model and flush changes to the master in the background. Flushout is written in TypeScript to support single-page applications, progressive web applications, and mobile clients that need to interact with data models without network delay and to support periods of offline data model manipulation. 
+Flushout is a distributed data model based on event-sourcing written in TypeScript to support single-page applications, progressive web applications, and mobile clients that need to interact with data models without network delay and support offline processing. Clients interact with a local proxy of a remote master model and can flush changes in the background to the master model for reconciliation. 
 
 Flushout design properties
 * Minimizes network traffic by only initializing clients with the latest model snapshot and then only send updates
@@ -23,8 +22,10 @@ The server initialize a Master model with the latest snapshot and apply flushes 
 **Create** - Creates a new object field inside an object in the document graph, optionally initializing the object with the values in the command's props object. The field will receive a random ID and the ID is returned to the application.   
 
 **Update** - Updates an object field in the document graph by setting the values specified in the command's props object.   
-
 **Delete** - Deletes the object in the document graph.   
+
+## Interceptor
+Both client and master can be initialized with an Interceptor function that can validate and modify commands before they are applied to the model. This provides for security and can help resolve certain conflicts.
 
 #### History and undo
 The update history of the master and the changes flushed by the proxies are represented by batches of **command completions**. Each batch has a number indicating the command count of the document it was applied to and each command completion includes a command that was successfully applied and optionally its resulting ID (if it created a new node). This means each document can rebuilt from an earlier version by re-applying all command completions that occurred after the document's command count. Applications can implement full or limited undo functionality by preserving the necessary earlier document snapshots and command completions.
