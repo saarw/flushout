@@ -89,6 +89,13 @@ export class Proxy<T extends object> implements Model<T> {
     return batch;
   }
   /**
+   * Returns whether a flush has begun.
+   */
+  public isFlushInProgress(): boolean {
+    return this.nextCommittedDocument != undefined;
+  }
+
+  /**
    * Cancels the current flush and puts the changes back at the start of the uncommitted queue
    * to be sent in the next flush. Can be used if the flush fails to communicate with the master.
    * @param flush The started the flush.
