@@ -77,7 +77,7 @@ export type CommandInterception =
  * @param batchContext An optional context that can be passed in with every batch the master model applies to 
  * provide info about user settings etc.
  */
-export type Interceptor<T extends object, C> = (
+export type Interceptor<T extends object, C = unknown> = (
   document: T,
   command: Command,
   batchContext?: C
