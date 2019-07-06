@@ -1,9 +1,56 @@
-import { CommandAction } from "./types";
+import { CommandAction, Snapshot } from "./types";
 import { createHistoryStore } from "./master.test";
 import { Master, HistoryProvider } from "./master";
 import { Proxy } from "./proxy";
 
 describe("Integration", () => {
+  test("proxy gets same data as master", async () => {
+    interface Todo {
+      title: string,
+      details: string
+    }
+    interface TodoList {
+      title: string,
+      todos: Record<string, Todo>
+    };
+    const latest: Snapshot<TodoList> = {
+      commandCount: 0,
+      document: {
+        title: '',
+        todos: {}
+      }
+    };
+    const master = new Master(latest);
+    const clientSnapshot: Snapshot<TodoList> = JSON.parse(JSON.stringify(master.getSnapshot()));
+    const proxy = new Proxy(clientSnapshot);
+    const result = proxy.apply({
+      path: ['todos'],
+      action: CommandAction.Create,
+      props: {
+        title: 'shopping',
+        details: 'coffee'
+      }
+    });
+    if (!result.isSuccess || result.createdId == undefined) {
+      fail();
+      return;
+    }
+    proxy.apply({
+      path: ['todos', result.createdId],
+      action: CommandAction.Update,
+      props: {
+        details: 'coffee and cookies'
+      }
+    });
+    const flush = proxy.beginFlush();
+    const response = await master.apply(flush);
+    proxy.endFlush(response.sync);
+
+    expect(proxy.getDocument()).toEqual(master.getSnapshot().document);
+    expect(proxy.getCommandCount()).toBe(master.getSnapshot().commandCount);
+    expect(proxy.getDocument().todos[Object.keys(proxy.getDocument().todos)[0]].details).toBe('coffee and cookies');
+
+  }),
   test("multiple proxies create tree with same root ID, without history store", async () => {
     const proxyA = new Proxy(
       {

@@ -8,6 +8,43 @@ Flushout design properties
 * Defines communication between client and server as simple interfaces to support inspection and validation
 * Optimizes for reducing network traffic and load on the server in favor of performing more work on the client
 
+# Basic use
+Clients initialize a proxy with the latest snapshot from the server, apply commands to the proxy, and flush the model to master, ending the flush by providing sync information from the master's flush response.
+```
+const proxy = new Proxy(clientSnapshot);
+const result = proxy.apply({
+    path: ['todos'],
+    action: CommandAction.Create,
+    props: {
+    title: 'shopping',
+    details: 'coffee'
+    }
+});
+proxy.apply({
+    path: ['todos', result.createdId],
+    action: CommandAction.Update,
+    props: {
+    details: 'coffee and cookies'
+    }
+});
+const flush = proxy.beginFlush();
+// Send the flush to the server and apply the master's flush response
+proxy.endFlush(flushResponse.sync);
+```
+Backends initialze the master with latest snapshot from the database and apply flushed command batches from the client proxies.
+```
+const latest: Snapshot<TodoList> = {
+      commandCount: 0,
+      document: {
+        title: '',
+        todos: {}
+      }
+    };
+const master = new Master(latest);
+...
+const flushResponse = await master.apply(flush);
+```
+
 # How it works
 ## Document and snapshot
 A document in Flushout is a simple JavaScript object that may contain primitive fields or additional object fields to form a tree graph. Applications modify the model by applying commands. A **snapshot** is simply a document and a count of how many commands have been applied to the document.
