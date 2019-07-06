@@ -43,7 +43,7 @@ Flushout is written in TypeScript and has no other dependencies.
 
 Design properties
 * Minimizes network traffic by only initializing clients with the latest model snapshot and then only send updates
-* Storing update history optional and history is stored separately from the latest model state
+* Storing update history is optional and command history is kept separate from the model state
 * Flexible about deployment and agnostic about network transport to fit many sorts of backends and protocols
 * Defines communication between client and server as data-only interfaces to support inspection and validation
 * Optimizes for reducing network traffic and load on the server in favor of performing more work on the client
@@ -76,9 +76,9 @@ The update history of the master and the changes flushed by the proxies are repr
 * If two proxies perform create commands that create a node with the same ID before flushing to the master, the flush will remap any queued up commands in the second proxy to the new node's ID and notify the application that IDs may have changed.
 
 ### Usage notes and error handling
-To not waste performance in Node's single-threaded event loop, Flushout avoids much protective object copying so you should be careful not to manually modify objects once they have been passed in to Flushout, or to modify objects received from the proxy's and master's getDocument/getSnapshot methods.   
+To not waste performance in Node's single-threaded event loop, Flushout avoids functional-style protective object copying so you should be careful not to manually modify objects once they have been passed in to Flushout, or to modify objects received from the proxy's and master's getDocument/getSnapshot methods.   
 
 Clients can recover from errors to send flushes by cancelling their flush and trying again, but this may result in duplicate updates to the Master if the error happened when a successful flush had already been applied but there was a problem sending the response. Applications can add code to track each client's latest command count in the backend for deduplication. Otherwise, fatal errors in the client can be recovered by recreating the proxy with the latest snapshot from the server.
 
 ## Background
-Flushout was built to support https://plotdash.com to offer a Google Docs-like experience where data model is always immediately responsive to the user while remote synchronization happens in the background. Flushout was developed to fit systems that use TypeScript as a full-stack language, exploiting the ease of sharing code between clients and server while recognizing the importance of server-side performance due to Node's single-threaded event loop. 
+Flushout was built for https://plotdash.com to offer a Google Docs-like experience where data model is always immediately responsive to the user while remote synchronization happens in the background. Flushout was developed to fit systems that use TypeScript as a full-stack language, exploiting the ease of sharing code between clients and server while recognizing the importance of server-side performance due to Node's single-threaded event loop. 
