@@ -1,6 +1,6 @@
 {
   "name": "flushout",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Flushout is a distributed data model based on event-sourcing written in TypeScript.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
