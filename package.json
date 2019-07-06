@@ -1,6 +1,6 @@
 {
   "name": "flushout",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Event-sourcing based data model where clients update local proxy models that flush updates to a remote master model that reconciles all changes.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,9 +8,9 @@
     "test": "jest",
     "build": "tsc",
     "lint": "tslint -p tsconfig.json",
-    "prepare" : "npm run build",
-    "prepublishOnly" : "npm test && npm run lint",
-    "preversion" : "npm run lint"
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run lint",
+    "preversion": "npm run lint"
   },
   "author": "William Saar",
   "license": "MIT",
