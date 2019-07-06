@@ -8,8 +8,8 @@ Flushout design properties
 * Defines communication between client and server as simple interfaces to support inspection and validation
 * Optimizes for reducing network traffic and load on the server in favor of performing more work on the client
 
-# Basic use
-Clients initialize proxies with the latest snapshot from master and apply commands to the proxies to modify the data model. They occasionally flush changes to the master and receive synchronization responses to stay up to date with changes that other clients have made on the master.
+# Example usage
+Here a client initializes a proxy with the latest snapshot of a Todo-list model from master and applies commands to create a new Todo item and update the item's description. The client then flushes the changes to the master and ends the flush by providing the master's synchronization information that brings the proxy's model to the same state as the master, performing changes flushed by other clients.
 ```
 const proxy = new Proxy(clientSnapshot);
 const result = proxy.apply({ 
