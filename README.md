@@ -9,30 +9,26 @@ Flushout design properties
 * Optimizes for reducing network traffic and load on the server in favor of performing more work on the client
 
 # Basic use
-Clients initialze proxies and modify the data model with commands that get flushed to the master.
+Clients initialize proxies with the latest snapshot from master and apply commands to the proxies to modify the data model. They occasionally flush changes to the master and receive synchronization responses to stay up to date with changes that other clients have made on the master.
 ```
-// Initialize the proxy with the latest snapshot from the backend
 const proxy = new Proxy(clientSnapshot);
-// Update the model by applying commands, here to add and then update a Todo item
 const result = proxy.apply({ 
-    path: ['todos'],
     action: CommandAction.Create,
+    path: ['todos'],
     props: {
     title: 'shopping',
     details: 'coffee'
     }
 });
 proxy.apply({
-    path: ['todos', result.createdId],
     action: CommandAction.Update,
+    path: ['todos', result.createdId],
     props: {
     details: 'coffee and cookies'
     }
 });
-// Flush the applied changes to the master
 const flush = proxy.beginFlush();
 ... // Send the flush to the backend and apply it to the master
-// Apply the response's optional sync to reconciles changes that other proxies had performed on the master
 proxy.endFlush(flushResponse.sync);
 ```
 Backends initialize the master with latest snapshot from the database and apply flushed command batches from the client proxies.
