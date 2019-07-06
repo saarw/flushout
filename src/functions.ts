@@ -22,14 +22,14 @@ export function applyCompletions<T extends object, C>(
   let modifiedBatch: CommandCompletion[] | undefined;
   let errors: CompletionError[] | undefined;
   completions.forEach((c, idx) => {
-    let path = c.command.path || [];
-    const mapped = pathMapper.get(path);
+    let commandPath = c.command.path || [];
+    const mapped = pathMapper.get(commandPath);
     let command: Command = c.command;
     if (mapped != undefined) {
         const {path, ...restOfCommand} = c.command;
         command = { path: mapped, ...restOfCommand };
     } 
-    path = mapped || path;
+    commandPath = mapped || commandPath;
     const interception = intercept ? intercept(model.getDocument(), command, context) : undefined;
     let isModified = mapped != undefined || interception != undefined;
     const resultWithCommand = applyCommandWithInterception(model, command, interception, c.createdId);
@@ -44,7 +44,7 @@ export function applyCompletions<T extends object, C>(
         result.createdId !== c.createdId
       ) {
         isModified = true;
-        pathMapper.put(path.concat(c.createdId), path.concat(result.createdId));
+        pathMapper.put(commandPath.concat(c.createdId), commandPath.concat(result.createdId));
       }
       if (modifiedBatch != undefined || isModified) {
         modifiedBatch = modifiedBatch || completions.slice(0, idx);
@@ -61,7 +61,7 @@ export function applyCompletions<T extends object, C>(
       }
       errors.push({
         action: c.command.action,
-        path,
+        path: commandPath,
         errorMessage: result.error
       });
     }
