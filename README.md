@@ -2,7 +2,7 @@
 Flushout is a distributed data model based on event-sourcing to support single-page applications and mobile clients that need to interact with data models without network delay and support offline processing. Clients interact with a local proxy of a remote master model and can flush changes to the master in the background for reconciliation. 
 
 # Example usage
-Here a client initializes a proxy with the latest snapshot of a Todo-list model from master and applies commands to create a new Todo item and update the item's description. The client then flushes the changes to the master and ends the flush by providing the master's synchronization information that brings the proxy's model to the same state as the master, performing changes flushed by other clients.
+A client initializes a proxy with the latest snapshot of a Todo-list model from the backend and applies commands to create and update a Todo-item. The client flushes its changes to the master and ends the flush with the master's synchronization information to bring the proxy model up to the same state as the master, including changes flushed by other clients.
 ```
 const proxy = new Proxy(clientSnapshot);
 const result = proxy.apply({ 
@@ -24,7 +24,7 @@ const flush = proxy.beginFlush();
 ... // Send the flush to the backend and apply it to the master
 proxy.endFlush(flushResponse.sync);
 ```
-Backends initialize the master with latest snapshot from the database and apply flushed command batches from the client proxies.
+The backend initializes a master with latest snapshot from the database and applies flushed command batches from clients.
 ```
 const latest: Snapshot<TodoList> = {
       commandCount: 0,
