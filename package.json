@@ -1,7 +1,7 @@
 {
   "name": "flushout",
   "version": "1.0.1",
-  "description": "Event-sourcing based data model where clients update local proxy models that flush updates to a remote master model that reconciles all changes.",
+  "description": "Flushout is a distributed data model based on event-sourcing written in TypeScript.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -14,6 +14,11 @@
   },
   "author": "William Saar",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saarw/flushout.git"
+  },
+  "homepage": "https://github.com/saarw/flushout",
   "devDependencies": {
     "@types/jest": "^24.0.13",
     "jest": "^24.8.0",

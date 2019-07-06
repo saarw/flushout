@@ -1,6 +1,11 @@
 # flushout
 Flushout is a distributed data model based on event-sourcing to support single-page applications and mobile clients that need to interact with data models without network delay and support offline processing. Clients interact with a local proxy of a remote master model and can flush changes to the master in the background for reconciliation. 
 
+#Installation
+```
+npm install --save flushout
+```
+
 # Example usage
 A client initializes a proxy with the latest snapshot of a Todo-list model from the backend and applies commands to create and update a Todo-item. The client flushes its changes to the master and ends the flush with the master's synchronization response that brings the proxy model up to the state of the master, including changes flushed by other clients.
 ```
