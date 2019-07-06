@@ -32,7 +32,7 @@ const flush = proxy.beginFlush();
 // Send the flush to the server and apply the master's flush response
 proxy.endFlush(flushResponse.sync);
 ```
-Backends initialze the master with latest snapshot from the database and apply flushed command batches from the client proxies.
+Backends initialize the master with latest snapshot from the database and apply flushed command batches from the client proxies.
 ```
 const latest: Snapshot<TodoList> = {
       commandCount: 0,
