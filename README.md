@@ -1,12 +1,5 @@
 # flushout
-Flushout is a distributed data model based on event-sourcing to support single-page applications and mobile clients that need to interact with data models without network delay and support offline processing. Clients interact with a local proxy of a remote master model and can flush changes to the master model for reconciliation at their convenience. Flushout is written in TypeScript and has no other dependencies.
-
-Flushout design properties
-* Minimizes network traffic by only initializing clients with the latest model snapshot and then only send updates
-* Makes storing update history optional and history is stored separately from the latest model state
-* Is flexible about deployment and agnostic about network transport to fit many sorts of backends and protocols
-* Defines communication between client and server as simple interfaces to support inspection and validation
-* Optimizes for reducing network traffic and load on the server in favor of performing more work on the client
+Flushout is a distributed data model based on event-sourcing to support single-page applications and mobile clients that need to interact with data models without network delay and support offline processing. Clients interact with a local proxy of a remote master model and can flush changes to the master in the background for reconciliation. 
 
 # Example usage
 Here a client initializes a proxy with the latest snapshot of a Todo-list model from master and applies commands to create a new Todo item and update the item's description. The client then flushes the changes to the master and ends the flush by providing the master's synchronization information that brings the proxy's model to the same state as the master, performing changes flushed by other clients.
@@ -46,6 +39,15 @@ const flushResponse = await master.apply(flush);
 ```
 
 # How it works
+Flushout is written in TypeScript and has no other dependencies.   
+
+Flushout design properties
+* Minimizes network traffic by only initializing clients with the latest model snapshot and then only send updates
+* Makes storing update history optional and history is stored separately from the latest model state
+* Is flexible about deployment and agnostic about network transport to fit many sorts of backends and protocols
+* Defines communication between client and server as simple interfaces to support inspection and validation
+* Optimizes for reducing network traffic and load on the server in favor of performing more work on the client
+
 ## Document and snapshot
 A document in Flushout is a simple JavaScript object that may contain primitive fields or additional object fields to form a tree graph. Applications modify the model by applying commands. A **snapshot** is simply a document and a count of how many commands have been applied to the document.
 
