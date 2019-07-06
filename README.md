@@ -9,11 +9,12 @@ Flushout design properties
 * Optimizes for reducing network traffic and load on the server in favor of performing more work on the client
 
 # Basic use
-Clients initialize a proxy with the latest snapshot from the server, apply commands to the proxy, and flush the model to master, ending the flush by providing sync information from the master's flush response to bring the proxy's model up to 
-the same state as the master.
+Clients initialze proxies and modify the data model with commands that get flushed to the master.
 ```
+// Initialize the proxy with the latest snapshot from the backend
 const proxy = new Proxy(clientSnapshot);
-const result = proxy.apply({
+// Update the model by applying commands, here to add and then update a Todo item
+const result = proxy.apply({ 
     path: ['todos'],
     action: CommandAction.Create,
     props: {
@@ -28,8 +29,10 @@ proxy.apply({
     details: 'coffee and cookies'
     }
 });
+// Flush the applied changes to the master
 const flush = proxy.beginFlush();
-// Send the flush to the server and apply the master's flush response
+... // Send the flush to the backend and apply it to the master
+// Apply the response's optional sync to reconciles changes that other proxies had performed on the master
 proxy.endFlush(flushResponse.sync);
 ```
 Backends initialize the master with latest snapshot from the database and apply flushed command batches from the client proxies.
@@ -51,10 +54,10 @@ const flushResponse = await master.apply(flush);
 A document in Flushout is a simple JavaScript object that may contain primitive fields or additional object fields to form a tree graph. Applications modify the model by applying commands. A **snapshot** is simply a document and a count of how many commands have been applied to the document.
 
 ## Client proxies
-Clients initialize a Proxy model with the latest snapshot from the backend. Clients then apply commands to modify the model and may periodically perform flush operations to synchronize their state with the remote master.
+Clients initialize a Proxy model with the latest snapshot from the backend. Clients then apply commands to modify the model and perform flush operations to synchronize their state with the remote master.
 
 ## Remote master
-The server initialize a Master model with the latest snapshot and apply flushed batches it receives from the client proxies to update the model and produce synchronization responses that let the proxies update to the same state as the master.
+The server initialize a Master model with the latest snapshot and an optional history provider. When a command batch from a client proxies is applied, the master returns optional synchronization information to let the proxy update its state to that of the master if other client proxies had modified the model since the last flush. If the master has a history provider, such synchronization responses can consist of command batches, otherwise they consist of the latest model snapshot.
 
 ### Commands   
 All commands include an action and allow specifying a path to where in the document graph the command should operate (omitting the path uses the root of the document).   
