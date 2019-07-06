@@ -4,7 +4,7 @@ Flushout is a distributed data model based on event-sourcing to support single-p
 # Example usage
 A client initializes a proxy with the latest snapshot of a Todo-list model from the backend and applies commands to create and update a Todo-item. The client flushes its changes to the master and ends the flush with the master's synchronization response that brings the proxy model up to the state of the master, including changes flushed by other clients.
 ```
-const proxy = new Proxy(clientSnapshot);
+const proxy = new Proxy(latestSnapshot);
 const result = proxy.apply({ 
     action: CommandAction.Create,
     path: ['todos'],
