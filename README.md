@@ -9,7 +9,8 @@ Flushout design properties
 * Optimizes for reducing network traffic and load on the server in favor of performing more work on the client
 
 # Basic use
-Clients initialize a proxy with the latest snapshot from the server, apply commands to the proxy, and flush the model to master, ending the flush by providing sync information from the master's flush response.
+Clients initialize a proxy with the latest snapshot from the server, apply commands to the proxy, and flush the model to master, ending the flush by providing sync information from the master's flush response to bring the proxy's model up to 
+the same state as the master.
 ```
 const proxy = new Proxy(clientSnapshot);
 const result = proxy.apply({
