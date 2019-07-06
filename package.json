@@ -7,7 +7,10 @@
   "scripts": {
     "test": "jest",
     "build": "tsc",
-    "lint": "tslint -p tsconfig.json"
+    "lint": "tslint -p tsconfig.json",
+    "prepare" : "npm run build",
+    "prepublishOnly" : "npm test && npm run lint",
+    "preversion" : "npm run lint"
   },
   "author": "William Saar",
   "license": "MIT",
