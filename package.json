@@ -9,8 +9,8 @@
     "build": "tsc",
     "lint": "tslint -p tsconfig.json"
   },
-  "author": "",
-  "license": "Copyright",
+  "author": "William Saar",
+  "license": "MIT",
   "devDependencies": {
     "@types/jest": "^24.0.13",
     "jest": "^24.8.0",
