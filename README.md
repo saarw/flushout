@@ -1,5 +1,5 @@
 # flushout
-Flushout is a distributed data model based on event-sourcing written in TypeScript to support single-page applications and mobile clients that need to interact with data models without network delay and support offline processing. Clients interact with a local proxy of a remote master model and can flush changes to the master model for reconciliation at their convenience. 
+Flushout is a distributed data model based on event-sourcing to support single-page applications and mobile clients that need to interact with data models without network delay and support offline processing. Clients interact with a local proxy of a remote master model and can flush changes to the master model for reconciliation at their convenience. Flushout is written in TypeScript and has no other dependencies.
 
 Flushout design properties
 * Minimizes network traffic by only initializing clients with the latest model snapshot and then only send updates
