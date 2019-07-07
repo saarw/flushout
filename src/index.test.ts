@@ -1,6 +1,6 @@
 import { CommandAction, Snapshot } from "./types";
 import { createHistoryStore } from "./master.test";
-import { Master, HistoryProvider } from "./master";
+import { Master } from "./master";
 import { Proxy } from "./proxy";
 
 describe("Integration", () => {
@@ -20,12 +20,19 @@ describe("Integration", () => {
         todos: {}
       }
     };
-    const master = new Master(latest);
+    const historyStore = createHistoryStore();
+    const master = new Master(latest, { historyProvider: historyStore.createProvider() });
     const clientSnapshot: Snapshot<TodoList> = JSON.parse(JSON.stringify(master.getSnapshot()));
     const proxy = new Proxy(clientSnapshot);
+    proxy.apply({
+      action: CommandAction.Update,
+      props: {
+        title: 'My todo list'
+      }
+    });
     const result = proxy.apply({
-      path: ['todos'],
       action: CommandAction.Create,
+      path: ['todos'],
       props: {
         title: 'shopping',
         details: 'coffee'
@@ -36,15 +43,16 @@ describe("Integration", () => {
       return;
     }
     proxy.apply({
-      path: ['todos', result.createdId],
       action: CommandAction.Update,
+      path: ['todos', result.createdId],
       props: {
         details: 'coffee and cookies'
       }
     });
     const flush = proxy.beginFlush();
-    const response = await master.apply(flush);
-    proxy.endFlush(response.sync);
+    const flushResponse = await master.apply(flush);
+    historyStore.store(flushResponse.applied.from, flushResponse.applied.completions);
+    proxy.endFlush(flushResponse.sync);
 
     expect(proxy.getDocument()).toEqual(master.getSnapshot().document);
     expect(proxy.getCommandCount()).toBe(master.getSnapshot().commandCount);

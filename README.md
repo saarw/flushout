@@ -1,5 +1,5 @@
 # flushout
-Flushout is a distributed data model based on event-sourcing to support single-page applications and mobile clients that need to interact with data models without network delay and support offline processing. Clients interact with a local proxy of a remote master model and can flush changes to the master in the background for reconciliation. 
+Flushout is a distributed data model based on event-sourcing to support single-page applications and mobile clients that need to interact with data models without network delay and support offline processing. Clients interact with a local proxy of a remote master model and flush changes to the master in the background for reconciliation with changes from other clients. 
 
 # Installation
 ```
@@ -29,7 +29,7 @@ const flush = proxy.beginFlush();
 ... // Send the flush to the backend and apply it to the master
 proxy.endFlush(flushResponse.sync);
 ```
-The backend initializes a master with latest snapshot from the database and applies flushed command batches from clients.
+The backend initializes a master with latest snapshot from the database and an optional command history provider. The application then applies flushed command batches from clients, adding the commands that were applied to the command history and returning any sync information to the proxy that sent the flush.
 ```
 const latest: Snapshot<TodoList> = {
       commandCount: 0,
@@ -38,10 +38,12 @@ const latest: Snapshot<TodoList> = {
         todos: {}
       }
     };
-const master = new Master(latest);
+const master = new Master(latest, { historyProvider: historyStore.createProvider() });
 ...
 const flushResponse = await master.apply(flush);
+historyStore.store(flushResponse.applied.from, flushResponse.applied.completions);
 ```
+For complete examples, check out the integration tests https://github.com/saarw/flushout/blob/master/src/index.test.ts
 
 # How it works
 Flushout is written in TypeScript and has no other dependencies.   
@@ -69,11 +71,14 @@ All commands include an action and allow specifying a path to where in the docum
 **Update** - Updates an object field in the document graph by setting the values specified in the command's props object.   
 **Delete** - Deletes the object in the document graph.   
 
-### Interceptor
-Both client and master can be initialized with an Interceptor function that can validate and modify commands before they are applied to the model. This provides for security and can help resolve certain conflicts.
+### History provider
+The master can be initialized with an optional history provider function. This lets master produce partial flush synchronization responses with a batches of commands that bring each proxy up to latest state when multiple proxies flush to the master simultanteously. Without the history provider, or with insufficient history (the amount of history to store is optional), flush synchronizations will include the full model snapshot.
 
-### History and undo
-The update history of the master and the changes flushed by the proxies are represented by batches of **command completions**. Each batch has a number indicating the command count of the document it was applied to and each command completion includes a command that was successfully applied and optionally its resulting ID (if it created a new node). This means each document can rebuilt from an earlier version by re-applying all command completions that occurred after the document's command count. Applications can implement full or limited undo functionality by preserving the necessary earlier document snapshots and command completions.
+### Interceptor
+Both client and master can be initialized with interceptor functions that can validate and modify command properties before they are applied to the model. This provides for security and can help resolve certain conflicts, as interceptors at the master can modify command properties based on the final state of the model.
+
+### Storing history, replays, and implementing undo
+When flushes are applied to the master, the master's response contains an **applied** field that returns the batch of **command completions** that were successfully applied to the master, along with the master model's command count at the start of the batch. This information can be stored as history and each document can rebuilt from an earlier version by re-applying all command completions that occurred after the older snapshot's command count. Applications can implement undo by storing older snapshots of the master model and apply all commands to just before the operation that should be undone (it may be necessary to implement and pass in a context to the apply-operation that tells the interceptor to disable itself for replays). 
 
 ### Collisions
 * Updates to the same node will simply overwrite each other, but applications that preserve command history may be able to implement more advanced merge operations.
