@@ -68,7 +68,9 @@ The server initialize a Master model with the latest snapshot and an optional hi
 
 ### Commands   
 All commands include an action and allow specifying a path to where in the document graph the command should operate (omitting the path uses the root of the document).   
-**Create** - Creates a new object field inside an object in the document graph, optionally initializing the object with the values in the command's props object. The field will receive a random ID and the ID is returned to the application.   **Update** - Updates an object field in the document graph by setting the values specified in the command's props object.   **Delete** - Deletes the object in the document graph.   
+**Create** - Creates a new object field inside an object in the document graph, optionally initializing the object with the values in the command's props object. The field will receive a random ID and the ID is returned to the application.   
+**Update** - Updates an object field in the document graph by setting the values specified in the command's props object.   
+**Delete** - Deletes the object in the document graph.   
 
 ### History provider
 The master can be initialized with an optional history provider function. This lets master produce partial flush synchronization responses with a batches of commands that bring each proxy up to latest state when multiple proxies flush to the master simultanteously. Without the history provider, or with insufficient history (the amount of history to store is optional), flush synchronizations will include the full model snapshot.
