@@ -26,8 +26,10 @@ proxy.apply({
     }
 });
 const flush = proxy.beginFlush();
-... // Send the flush to the backend and apply it to the master
+... // Send the flush to the backend to apply it to the master, use its response to end the flush
 proxy.endFlush(flushResponse.sync);
+// The current document is always available to the app using
+const currentTodoList = proxy.getDocument();
 ```
 The backend initializes a master with latest snapshot from the database and an optional command history provider. The application then applies flushed command batches from clients, adding the commands that were applied to the command history and returning any sync information to the proxy that sent the flush.
 ```
