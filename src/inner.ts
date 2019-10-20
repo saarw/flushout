@@ -32,7 +32,7 @@ export class Inner<T extends object> implements Model<T> {
         } else if (command.parentDefault && path.length > 0) {
           const parentsParent = this.navigateToNode(path.slice(0, path.length - 1));
           if (parentsParent.found) {
-            parentsParent.node[path[path.length - 1]] = command.parentDefault;
+            parentsParent.node[path[path.length - 1]] = JSON.parse(JSON.stringify(command.parentDefault));
             node = parentsParent.node[path[path.length - 1]];
           } else {
             errorPath = parentsParent.errorPath;

@@ -57,8 +57,8 @@ describe("Integration", () => {
     expect(proxy.getDocument()).toEqual(master.getSnapshot().document);
     expect(proxy.getCommandCount()).toBe(master.getSnapshot().commandCount);
     expect(proxy.getDocument().todos[Object.keys(proxy.getDocument().todos)[0]].details).toBe('coffee and cookies');
+  });
 
-  }),
   test("multiple proxies create tree with same root ID, without history store", async () => {
     const proxyA = new Proxy(
       {
@@ -240,5 +240,50 @@ describe("Integration", () => {
     expect(proxyA.getCommandCount()).toBe(4);
     expect(proxyA.getCommandCount()).toBe(proxyB.getCommandCount());
     expect(proxyA.getDocument()).toStrictEqual(proxyB.getDocument());
+  });
+
+  test("creation with parentDefault transfers correctly", async () => {
+    interface Todo {
+      title: string,
+      details: string
+    }
+    interface TodoList {
+      title: string,
+      todos?: Record<string, Todo>
+    };
+    const latest: Snapshot<TodoList> = {
+      commandCount: 0,
+      document: {
+        title: '',
+      }
+    };
+    const historyStore = createHistoryStore();
+    const master = new Master(latest, { historyProvider: historyStore.createProvider() });
+    const clientSnapshot: Snapshot<TodoList> = JSON.parse(JSON.stringify(master.getSnapshot()));
+    const proxy = new Proxy(clientSnapshot);
+    const result = proxy.apply({
+      action: CommandAction.Create,
+      path: ['todos'],
+      props: {
+        title: 'shopping',
+        details: 'coffee'
+      },
+      parentDefault: {}
+    });
+    if (!result.isSuccess || result.createdId == undefined) {
+      fail();
+      return;
+    }
+    const flush = proxy.beginFlush();
+    const flushResponse = await master.apply(flush);
+    historyStore.store(flushResponse.applied.from, flushResponse.applied.completions);
+    proxy.endFlush(flushResponse.sync);
+
+    expect(proxy.getDocument()).toEqual(master.getSnapshot().document);
+    expect(proxy.getCommandCount()).toBe(master.getSnapshot().commandCount);
+    expect(proxy.getDocument().todos).not.toBeUndefined();
+    expect(Object.keys(proxy.getDocument().todos!).length).toBe(1);
+    expect(proxy.getDocument().todos![Object.keys(proxy.getDocument().todos!)[0]].details).toBe('coffee');
+
   });
 });
