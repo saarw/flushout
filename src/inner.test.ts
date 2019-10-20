@@ -130,4 +130,45 @@ describe("Inner", () => {
     );
     expect(model.getDocument()[result.createdId!]).toEqual({});
   });
+
+  test("create with default parent", () => {
+    const model = new Inner<any>({}, false);
+    const branch = 'parentBranch';
+    const result = model.apply({
+      action: CommandAction.Create,
+      path: [branch],
+      props: {},
+      parentDefault: {}
+    });
+    expect(model.getCommandCount()).toBe(1);
+    if (result.isSuccess === false) {
+      fail();
+      return;
+    }
+    expect(model.getDocument()[branch][result.createdId!]).toEqual({});
+  });
+
+  test("create two children with default parent", () => {
+    const model = new Inner<any>({}, false);
+    const branch = 'parentBranch';
+    const result = model.apply({
+      action: CommandAction.Create,
+      path: [branch],
+      props: {},
+      parentDefault: {}
+    });
+    const result2 = model.apply({
+      action: CommandAction.Create,
+      path: [branch],
+      props: {},
+      parentDefault: {}
+    });
+    expect(model.getCommandCount()).toBe(2);
+    if (result.isSuccess === false || result2.isSuccess === false) {
+      fail();
+      return;
+    }
+    expect(model.getDocument()[branch][result.createdId!]).toEqual({});
+    expect(model.getDocument()[branch][result2.createdId!]).toEqual({});
+  });
 });

@@ -25,8 +25,22 @@ export class Inner<T extends object> implements Model<T> {
     switch (command.action) {
       case CommandAction.Create: {
         const result = this.navigateToNode(path);
+        let node: undefined | any;
+        let errorPath: undefined | string[];
         if (result.found) {
-          const node = result.node;
+          node = result.node;
+        } else if (command.parentDefault && path.length > 0) {
+          const parentsParent = this.navigateToNode(path.slice(0, path.length - 1));
+          if (parentsParent.found) {
+            parentsParent.node[path[path.length - 1]] = command.parentDefault;
+            node = parentsParent.node[path[path.length - 1]];
+          } else {
+            errorPath = parentsParent.errorPath;
+          }
+        } else {
+          errorPath = result.errorPath;
+        }
+        if (node) {
           let attempt = 0;
           let newId;
           do {
@@ -48,7 +62,7 @@ export class Inner<T extends object> implements Model<T> {
         }
         return {
           isSuccess: false,
-          error: 'No object at document path ' + result.errorPath.toString()
+          error: 'No object at document path ' + (errorPath || []).toString()
         };
       }
       case CommandAction.Update: {

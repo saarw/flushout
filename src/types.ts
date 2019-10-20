@@ -32,6 +32,7 @@ export type Command<Props extends object = any> = { path?: string[] } & (
     {
         action: CommandAction.Create;
         props?: Props;
+        parentDefault?: object; // If a parent node doesn't exist, create it with this value
     } |
     {
         action: CommandAction.Update;
