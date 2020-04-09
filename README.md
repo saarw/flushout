@@ -13,6 +13,7 @@ npm install --save flushout
 ```
 
 # Example usage
+*Also see the blog post [Building a collaborative React app with Flushout](https://saarw.github.io/dev/2020/03/02/building-a-collaborative-react-app-with-flushout.html)*
 
 A client initializes a proxy with the latest snapshot of a Todo-list model from
 the backend and applies commands to create and update a Todo-item. The client
