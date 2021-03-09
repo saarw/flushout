@@ -1,10 +1,6 @@
 # flushout
 
-Flushout is a distributed data model based on event sourcing to support
-single-page applications and mobile clients that need to interact with data
-models without network delay and support offline processing. Clients interact
-with a local proxy of a remote master model and flush changes to the master in
-the background for reconciliation with changes from other clients.
+Flushout is a distributed data model based on event sourcing for collaborative applications and for clients that need responsive interaction without network delay or need to function offline. Clients interact with a local proxy of a remote master model without accessing the network and can periodically flush changes from the proxy to the master in the background when the network is available.
 
 # Installation
 
@@ -116,12 +112,12 @@ synchronize their state with the remote master.
 ## Remote master
 
 The server initialize a Master model with the latest snapshot and an optional
-history provider. When a command batch from a client proxies is applied, the
-master returns optional synchronization information to let the proxy update its
-state to that of the master if other client proxies had modified the model since
-the last flush. If the master has a history provider, such synchronization
-responses can consist of command batches, otherwise they consist of the latest
-model snapshot.
+history provider. When the server applies a command batch from a client proxy on 
+the master, the master returns optional synchronization information that lets the 
+proxy update its state to that of the master with updates from other clients. 
+
+If the master has a history provider, synchronization responses can consist 
+of incremental command batches, otherwise the update is always the latest full snapshot.
 
 ### Commands
 
@@ -150,7 +146,7 @@ will include the full model snapshot.
 Both client and master can be initialized with interceptor functions that can
 validate and modify command properties before they are applied to the model.
 This provides for security and can help resolve certain conflicts, as
-interceptors at the master can modify command properties based on the final
+interceptors at the master can modify command properties based on the current
 state of the model.
 
 ### Storing history, replays, and implementing undo
