@@ -1,6 +1,8 @@
 # flushout
 
-Flushout is a distributed data model based on event sourcing for collaborative applications and for clients that need responsive interaction without network delay or need to function offline. Clients interact with a local proxy of a remote master model without accessing the network and can periodically flush changes from the proxy to the master in the background when the network is available.
+Flushout is a distributed data model based on event sourcing. Collaborative applications use it for clients that need responsive interaction without network delay, or need to function offline. 
+
+Clients interact with a local proxy of a remote master model without accessing the network. They can then periodically flush changes from the proxy to the master in the background when the network is available.
 
 # Installation
 
